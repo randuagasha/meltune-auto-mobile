@@ -21,6 +21,7 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PREVIEW_PRODUCTS } from '@/services/previewData';
+import { useProductsQuery } from '@/hooks/useWorkshopData';
 import { useCartStore } from '@/stores/cartStore';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
@@ -28,9 +29,13 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { data: products = PREVIEW_PRODUCTS } = useProductsQuery();
 
+  const productId = String(params.id || '');
   const product =
-    PREVIEW_PRODUCTS.find(p => p.id === params.id) || PREVIEW_PRODUCTS[0];
+    products.find(p => p.id === productId) ||
+    PREVIEW_PRODUCTS.find(p => p.id === productId) ||
+    PREVIEW_PRODUCTS[0];
 
   const { addItem } = useCartStore();
   const [quantity, setQuantity] = useState(1);

@@ -98,7 +98,7 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
 
                 {stage.technicianNotes && (
                   <View style={styles.notesBox}>
-                    <Text style={styles.notesPrefix}>CATATAN TEKNISI // BSD:</Text>
+                    <Text style={styles.notesPrefix}>CATATAN TEKNISI:</Text>
                     <Text style={styles.notesText}>{stage.technicianNotes}</Text>
                   </View>
                 )}

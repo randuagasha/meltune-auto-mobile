@@ -1,4 +1,4 @@
-export type UserRole = 'customer';
+export type UserRole = 'customer' | 'mechanic' | 'superadmin';
 
 export interface UserProfile {
   id: string;
@@ -6,6 +6,7 @@ export interface UserProfile {
   fullName: string;
   phone?: string;
   role: UserRole;
+  isActive?: boolean;
   avatarUrl?: string;
   createdAt?: string;
 }

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -20,23 +21,38 @@ import { Image } from 'expo-image';
 import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { DividedList } from '@/components/ui/DividedList';
 import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
+import { PREVIEW_USER, PREVIEW_VEHICLES, PREVIEW_BOOKINGS, PREVIEW_SERVICES } from '@/services/previewData';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  PREVIEW_USER,
-  PREVIEW_VEHICLES,
-  PREVIEW_BOOKINGS,
-  PREVIEW_SERVICES,
-} from '@/services/previewData';
-import {
-  MeltuneColors,
-  Radius,
-  Spacing,
-  Typography,
-} from '@/theme';
+  useVehiclesQuery,
+  useBookingsQuery,
+  useServicesQuery,
+  useLoyaltyProfileQuery,
+} from '@/hooks/useWorkshopData';
+import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const primaryVehicle = PREVIEW_VEHICLES[0];
-  const activeBooking = PREVIEW_BOOKINGS.find(b => b.status === 'in_progress');
+  const { user } = useAuthStore();
+  const { data: vehicles = [], refetch: refetchVehicles } = useVehiclesQuery();
+  const { data: bookings = [], refetch: refetchBookings } = useBookingsQuery();
+  const { data: services = [], refetch: refetchServices } = useServicesQuery();
+  const { data: loyalty, refetch: refetchLoyalty } = useLoyaltyProfileQuery();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refetchVehicles(),
+      refetchBookings(),
+      refetchServices(),
+      refetchLoyalty(),
+    ]);
+    setRefreshing(false);
+  };
+
+  const primaryVehicle = vehicles[0] || PREVIEW_VEHICLES[0];
+  const activeBooking = bookings.find(b => b.status === 'in_progress' || b.status === 'confirmed');
 
   // Custom Header rendered on top of the Persistent Gradient Background
   const renderHeader = () => (
@@ -44,7 +60,7 @@ export default function HomeScreen() {
       <View style={styles.headerLeft}>
         <Text style={styles.brandTag}>MELTUNE AUTO</Text>
         <Text style={styles.greetingTitle}>
-          Selamat datang, <Text style={styles.userName}>{PREVIEW_USER.fullName}</Text>
+          Selamat datang, <Text style={styles.userName}>{user?.fullName || PREVIEW_USER.fullName}</Text>
         </Text>
       </View>
 
@@ -65,7 +81,16 @@ export default function HomeScreen() {
   );
 
   return (
-    <AmbientGradientShell customHeader={renderHeader()}>
+    <AmbientGradientShell
+      customHeader={renderHeader()}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={MeltuneColors.burntOrange}
+        />
+      }
+    >
       {/* 1. Primary Vehicle Showcase (Directly on the Surface) */}
       {primaryVehicle && (
         <View style={styles.vehicleShowcaseSection}>

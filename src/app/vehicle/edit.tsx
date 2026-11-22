@@ -13,27 +13,51 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { FormInput } from '@/components/ui/FormInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PREVIEW_VEHICLES } from '@/services/previewData';
+import { useVehiclesQuery, useUpdateVehicleMutation } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Shadows } from '@/theme';
 
 export default function EditVehicleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { data: vehicles = [] } = useVehiclesQuery();
+  const updateVehicleMutation = useUpdateVehicleMutation();
 
+  const vehicleId = String(params.id || '');
   const vehicle =
-    PREVIEW_VEHICLES.find(v => v.id === params.id) || PREVIEW_VEHICLES[0];
+    vehicles.find(v => v.id === vehicleId) ||
+    PREVIEW_VEHICLES.find(v => v.id === vehicleId) ||
+    PREVIEW_VEHICLES[0];
 
   const [model, setModel] = useState(vehicle.model);
   const [licensePlate, setLicensePlate] = useState(vehicle.licensePlate);
   const [mileage, setMileage] = useState(String(vehicle.mileage || ''));
   const [notes, setNotes] = useState(vehicle.notes || '');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSave = () => {
-    Alert.alert(
-      'Perubahan Disimpan',
-      'Informasi kendaraan telah berhasil diperbarui.',
-      [{ text: 'Kembali', onPress: () => router.back() }]
-    );
+  const handleSave = async () => {
+    setSubmitting(true);
+    try {
+      await updateVehicleMutation.mutateAsync({
+        id: vehicle.id,
+        data: {
+          model: model.trim(),
+          licensePlate: licensePlate.toUpperCase().trim(),
+          mileage: mileage ? Number(mileage) : undefined,
+          notes: notes.trim() || undefined,
+        },
+      });
+
+      Alert.alert(
+        'Perubahan Disimpan',
+        'Informasi kendaraan telah berhasil diperbarui.',
+        [{ text: 'Kembali', onPress: () => router.back() }]
+      );
+    } catch (err: any) {
+      Alert.alert('Gagal Memperbarui Kendaraan', err?.message || 'Terjadi kesalahan.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -85,6 +109,7 @@ export default function EditVehicleScreen() {
           <PrimaryButton
             title="Simpan Perubahan Data"
             onPress={handleSave}
+            loading={submitting}
             size="lg"
             style={{ width: '100%', marginTop: Spacing.md }}
           />

@@ -27,7 +27,7 @@ export default function ServiceTrackingScreen() {
       <AppHeader
         title="Live Workbay Tracking"
         subtitle={`Mobil: ${activeBooking.vehicleName}`}
-        tag="REAL-TIME TELEMETRY // BSD"
+        tag="LIVE TRACKING WORKBAY"
         dark
         showBack
       />

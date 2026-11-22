@@ -13,11 +13,13 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { FormInput } from '@/components/ui/FormInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useCreateVehicleMutation } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function AddVehicleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const createVehicleMutation = useCreateVehicleMutation();
 
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -27,18 +29,38 @@ export default function AddVehicleScreen() {
   const [transmission, setTransmission] = useState<'automatic' | 'manual'>('automatic');
   const [fuelType, setFuelType] = useState<'petrol' | 'diesel'>('petrol');
   const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!brand || !model || !licensePlate) {
       Alert.alert('Perhatian', 'Merek, model, dan plat nomor polisi wajib diisi.');
       return;
     }
 
-    Alert.alert(
-      'Kendaraan Terdaftar',
-      `${brand} ${model} (${licensePlate}) berhasil ditambahkan ke garasi mobil Anda.`,
-      [{ text: 'Selesai', onPress: () => router.back() }]
-    );
+    setSubmitting(true);
+    try {
+      await createVehicleMutation.mutateAsync({
+        userId: '',
+        brand: brand.trim(),
+        model: model.trim(),
+        year: Number(year) || new Date().getFullYear(),
+        licensePlate: licensePlate.toUpperCase().trim(),
+        transmission,
+        fuelType,
+        mileage: mileage ? Number(mileage) : undefined,
+        notes: notes.trim() || undefined,
+      });
+
+      Alert.alert(
+        'Kendaraan Terdaftar',
+        `${brand} ${model} (${licensePlate}) berhasil ditambahkan ke garasi mobil Anda.`,
+        [{ text: 'Selesai', onPress: () => router.back() }]
+      );
+    } catch (err: any) {
+      Alert.alert('Gagal Menambahkan Kendaraan', err?.message || 'Terjadi kesalahan sistem.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -118,6 +140,7 @@ export default function AddVehicleScreen() {
           <PrimaryButton
             title="Simpan ke Garasi Saya"
             onPress={handleSubmit}
+            loading={submitting}
             size="lg"
             style={styles.submitBtn}
           />

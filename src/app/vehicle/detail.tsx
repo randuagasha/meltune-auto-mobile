@@ -22,15 +22,20 @@ import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackgr
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PREVIEW_VEHICLES } from '@/services/previewData';
+import { useVehiclesQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { data: vehicles = PREVIEW_VEHICLES } = useVehiclesQuery();
 
+  const vehicleId = String(params.id || '');
   const vehicle =
-    PREVIEW_VEHICLES.find(v => v.id === params.id) || PREVIEW_VEHICLES[0];
+    vehicles.find(v => v.id === vehicleId) ||
+    PREVIEW_VEHICLES.find(v => v.id === vehicleId) ||
+    vehicles[0];
 
   const specs = [
     { label: 'MEREK & TAHUN', value: `${vehicle.brand} (${vehicle.year})` },

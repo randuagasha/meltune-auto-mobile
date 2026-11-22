@@ -3,231 +3,390 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react-native';
-import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackground';
+import {
+  User,
+  Mail,
+  Phone,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react-native';
+import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { FormInput } from '@/components/ui/FormInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
+import { useAuthStore } from '@/stores/authStore';
+import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { register, isLoading, error: authStoreError, clearError } = useAuthStore();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [verificationNotice, setVerificationNotice] = useState<string | null>(null);
 
-  const handleRegister = () => {
-    setError(null);
-    if (!fullName || !email || !password) {
-      setError('Nama lengkap, email, dan kata sandi wajib diisi.');
-      return;
+  const displayError = localError || authStoreError;
+
+  const validate = (): boolean => {
+    setLocalError(null);
+    clearError();
+
+    const trimmedName = fullName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      setLocalError('Nama lengkap minimal 2 karakter.');
+      return false;
     }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setLocalError('Alamat email wajib diisi.');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setLocalError('Format alamat email tidak valid.');
+      return false;
+    }
+
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone || trimmedPhone.length < 9) {
+      setLocalError('Nomor telepon / WhatsApp minimal 9 digit.');
+      return false;
+    }
+
+    if (!password || password.length < 8) {
+      setLocalError('Kata sandi harus minimal 8 karakter.');
+      return false;
+    }
+
     if (password !== confirmPassword) {
-      setError('Konfirmasi kata sandi tidak cocok.');
-      return;
+      setLocalError('Konfirmasi kata sandi tidak cocok.');
+      return false;
     }
 
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.replace('/(tabs)');
-    }, 600);
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validate()) return;
+
+    const result = await register({
+      fullName,
+      email,
+      phone,
+      password,
+    });
+
+    if (result.success) {
+      if (result.requiresEmailVerification) {
+        setVerificationNotice(
+          result.message ||
+            'Pendaftaran berhasil! Tautan verifikasi telah dikirimkan ke email Anda. Silakan verifikasi sebelum masuk.'
+        );
+      } else {
+        router.replace('/(tabs)');
+      }
+    }
   };
 
   return (
-    <AmbientGradientBackground preset="deepAuth">
+    <AmbientGradientShell
+      showBack
+      onBackPress={() => {
+        clearError();
+        router.replace('/(auth)/login');
+      }}
+      tag="REGISTRASI PELANGGAN"
+      title="Buat Akun Baru"
+      subtitle="Daftarkan profil untuk kemudahan perawatan kendaraan"
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        style={styles.keyboardContainer}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingTop: Math.max(insets.top, 24) + Spacing.lg,
-              paddingBottom: Math.max(insets.bottom, 24) + Spacing.xl,
-            },
-          ]}
-        >
-          <View style={styles.brandContainer}>
-            <View style={styles.brandBadge}>
-              <Text style={styles.brandBadgeText}>REGISTRASI PELANGGAN BARU</Text>
-            </View>
-            <Text style={styles.brandTitle}>Buat Akun Meltune</Text>
-            <Text style={styles.brandSubtitle}>
-              Daftarkan diri Anda untuk kemudahan booking servis dan pemantauan garasi mobil.
-            </Text>
-          </View>
-
-          <View style={[styles.card, Shadows.darkElevated]}>
-            {error && (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.formContainer}>
+          {verificationNotice ? (
+            /* Email Verification Success State */
+            <View style={styles.verificationCard}>
+              <View style={styles.verificationIconBox}>
+                <CheckCircle2 size={44} color={MeltuneColors.statusSuccess} />
               </View>
-            )}
+              <Text style={styles.verificationTitle}>Pendaftaran Berhasil</Text>
+              <Text style={styles.verificationDesc}>{verificationNotice}</Text>
+              <PrimaryButton
+                title="Lanjutkan ke Halaman Masuk"
+                onPress={() => router.replace('/(auth)/login')}
+                size="lg"
+                style={styles.verificationButton}
+                iconRight={<ArrowRight size={18} color={MeltuneColors.white} />}
+              />
+            </View>
+          ) : (
+            /* Registration Form */
+            <>
+              <View style={styles.introBlock}>
+                <Text style={styles.introHeading}>Pendaftaran Akun Pelanggan</Text>
+                <Text style={styles.introDesc}>
+                  Daftarkan kendaraan dan data diri Anda untuk riwayat servis terpadu, booking online, dan program loyalitas.
+                </Text>
+              </View>
 
-            <FormInput
-              label="Nama Lengkap Pemilik"
-              placeholder="Contoh: Randu Pradana"
-              value={fullName}
-              onChangeText={setFullName}
-              icon={<User size={16} color={MeltuneColors.textMutedLight} />}
-            />
+              {displayError && (
+                <View style={styles.errorBanner}>
+                  <AlertCircle size={16} color={MeltuneColors.statusDanger} style={styles.errorIcon} />
+                  <Text style={styles.errorText}>{displayError}</Text>
+                </View>
+              )}
 
-            <FormInput
-              label="Alamat Email"
-              placeholder="nama@domain.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              icon={<Mail size={16} color={MeltuneColors.textMutedLight} />}
-            />
+              <FormInput
+                label="Nama Lengkap Pemilik"
+                placeholder="Contoh: Randu Pradana"
+                value={fullName}
+                onChangeText={text => {
+                  setFullName(text);
+                  if (displayError) {
+                    setLocalError(null);
+                    clearError();
+                  }
+                }}
+                autoCapitalize="words"
+                technicalCode="USER.FULL_NAME"
+                icon={<User size={16} color={MeltuneColors.textMutedLight} />}
+              />
 
-            <FormInput
-              label="Nomor WhatsApp / Telepon"
-              placeholder="+62 812-xxxx-xxxx"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              icon={<Phone size={16} color={MeltuneColors.textMutedLight} />}
-            />
+              <FormInput
+                label="Alamat Email"
+                placeholder="nama@domain.com"
+                value={email}
+                onChangeText={text => {
+                  setEmail(text);
+                  if (displayError) {
+                    setLocalError(null);
+                    clearError();
+                  }
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                technicalCode="USER.EMAIL"
+                icon={<Mail size={16} color={MeltuneColors.textMutedLight} />}
+              />
 
-            <FormInput
-              label="Kata Sandi"
-              placeholder="Minimal 8 karakter..."
-              value={password}
-              onChangeText={setPassword}
-              isPassword
-              icon={<Lock size={16} color={MeltuneColors.textMutedLight} />}
-            />
+              <FormInput
+                label="Nomor WhatsApp / HP"
+                placeholder="081234567890"
+                value={phone}
+                onChangeText={text => {
+                  setPhone(text);
+                  if (displayError) {
+                    setLocalError(null);
+                    clearError();
+                  }
+                }}
+                keyboardType="phone-pad"
+                technicalCode="USER.PHONE"
+                icon={<Phone size={16} color={MeltuneColors.textMutedLight} />}
+              />
 
-            <FormInput
-              label="Ulangi Kata Sandi"
-              placeholder="Konfirmasi kata sandi..."
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              isPassword
-              icon={<Lock size={16} color={MeltuneColors.textMutedLight} />}
-            />
+              <FormInput
+                label="Kata Sandi (Min. 8 Karakter)"
+                placeholder="Masukkan kata sandi..."
+                value={password}
+                onChangeText={text => {
+                  setPassword(text);
+                  if (displayError) {
+                    setLocalError(null);
+                    clearError();
+                  }
+                }}
+                isPassword
+                technicalCode="AUTH.PASSWORD"
+                icon={<Lock size={16} color={MeltuneColors.textMutedLight} />}
+              />
 
-            <PrimaryButton
-              title="Daftar Akun Workshop"
-              onPress={handleRegister}
-              loading={loading}
-              size="lg"
-              style={styles.submitButton}
-              iconRight={<ArrowRight size={18} color={MeltuneColors.white} />}
-            />
-          </View>
+              <FormInput
+                label="Konfirmasi Kata Sandi"
+                placeholder="Ulangi kata sandi..."
+                value={confirmPassword}
+                onChangeText={text => {
+                  setConfirmPassword(text);
+                  if (displayError) {
+                    setLocalError(null);
+                    clearError();
+                  }
+                }}
+                isPassword
+                technicalCode="AUTH.CONFIRM"
+                icon={<Lock size={16} color={MeltuneColors.textMutedLight} />}
+              />
 
-          <View style={styles.footerRow}>
-            <Text style={styles.footerPrompt}>Sudah memiliki akun terdaftar?</Text>
-            <Pressable onPress={() => router.push('/(auth)/login')}>
-              <Text style={styles.footerLink}>Masuk di sini</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
+              <PrimaryButton
+                title="Daftar Akun Workshop"
+                onPress={handleRegister}
+                loading={isLoading}
+                size="lg"
+                style={styles.submitButton}
+                iconRight={<ArrowRight size={18} color={MeltuneColors.white} />}
+              />
+
+              <View style={styles.loginPromptRow}>
+                <Text style={styles.loginPromptText}>Sudah memiliki akun terdaftar?</Text>
+                <Pressable
+                  onPress={() => {
+                    clearError();
+                    setLocalError(null);
+                    router.replace('/(auth)/login');
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.loginPromptLink}>Masuk di sini</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.securityBox}>
+                <ShieldCheck size={15} color={MeltuneColors.burntOrange} />
+                <Text style={styles.securityText}>
+                  Data tersimpan secara aman & dilindungi kebijakan privasi Meltune Auto.
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
       </KeyboardAvoidingView>
-    </AmbientGradientBackground>
+    </AmbientGradientShell>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    flexGrow: 1,
-    justifyContent: 'center',
+  keyboardContainer: {
+    flex: 1,
   },
-  brandContainer: {
-    alignItems: 'center',
+  formContainer: {
+    paddingHorizontal: Spacing.xl, // 24px consistent horizontal padding
+  },
+  introBlock: {
     marginBottom: Spacing.xl,
   },
-  brandBadge: {
-    backgroundColor: 'rgba(217, 107, 58, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(217, 107, 58, 0.4)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radius.xs,
-    marginBottom: Spacing.xs,
-  },
-  brandBadgeText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.burntOrange,
-    letterSpacing: 1.5,
-  },
-  brandTitle: {
+  introHeading: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.title1,
+    fontSize: Typography.size.title2,
     fontWeight: Typography.weight.extrabold,
-    color: MeltuneColors.white,
-    letterSpacing: Typography.letterSpacing.editorialHeading,
+    color: MeltuneColors.charcoal,
+    letterSpacing: Typography.letterSpacing.tight,
   },
-  brandSubtitle: {
+  introDesc: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryDark,
-    textAlign: 'center',
-    marginTop: 4,
-    maxWidth: 290,
-    lineHeight: 18,
+    color: MeltuneColors.textSecondaryLight,
+    marginTop: Spacing.xs,
+    lineHeight: 20,
   },
-  card: {
-    backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.xl,
-    padding: Spacing.xl,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-  },
-  errorBox: {
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  errorIcon: {
+    marginRight: Spacing.sm,
+    flexShrink: 0,
   },
   errorText: {
+    flex: 1,
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.micro,
+    fontSize: Typography.size.caption,
     color: MeltuneColors.statusDanger,
+    lineHeight: 18,
   },
   submitButton: {
     width: '100%',
     marginTop: Spacing.sm,
   },
-  footerRow: {
+  loginPromptRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginTop: Spacing.xl,
+    marginTop: Spacing.xxl,
   },
-  footerPrompt: {
+  loginPromptText: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryDark,
+    color: MeltuneColors.textSecondaryLight,
   },
-  footerLink: {
+  loginPromptLink: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.burntOrange,
+  },
+  securityBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.xxl,
+    paddingTop: Spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: MeltuneColors.borderLight,
+  },
+  securityText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    color: MeltuneColors.textMutedLight,
+    lineHeight: 16,
+  },
+  verificationCard: {
+    backgroundColor: MeltuneColors.white,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: MeltuneColors.borderLight,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+  },
+  verificationIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  verificationTitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.title2,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+    marginBottom: Spacing.xs,
+  },
+  verificationDesc: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    color: MeltuneColors.textSecondaryLight,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  verificationButton: {
+    width: '100%',
   },
 });

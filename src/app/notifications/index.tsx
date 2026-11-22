@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,11 +13,20 @@ import { Bell, Wrench, Flame, ShieldAlert, ChevronRight } from 'lucide-react-nat
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PREVIEW_NOTIFICATIONS } from '@/services/previewData';
+import { useNotificationsQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function NotificationCenterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: notifications = PREVIEW_NOTIFICATIONS, refetch } = useNotificationsQuery();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -34,19 +44,26 @@ export default function NotificationCenterScreen() {
       <AppHeader
         title="Pusat Notifikasi"
         subtitle="Pemberitahuan Servis, Workbay & Promo"
-        tag="ALERT SYSTEM // BSD"
+        tag="PUSAT NOTIFIKASI"
         showBack
       />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={MeltuneColors.burntOrange}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xxl },
         ]}
       >
         <View style={styles.list}>
-          {PREVIEW_NOTIFICATIONS.map(notif => (
+          {notifications.map(notif => (
             <Pressable
               key={notif.id}
               onPress={() => {

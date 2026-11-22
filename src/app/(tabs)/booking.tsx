@@ -19,6 +19,7 @@ import { FormInput } from '@/components/ui/FormInput';
 import { DividedList } from '@/components/ui/DividedList';
 import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
 import { PREVIEW_VEHICLES, PREVIEW_SERVICES } from '@/services/previewData';
+import { useVehiclesQuery, useServicesQuery, useCreateBookingMutation } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 const TIME_SLOTS = [
@@ -31,21 +32,25 @@ const TIME_SLOTS = [
 
 export default function BookingScreen() {
   const router = useRouter();
+  const { data: vehicles = [] } = useVehiclesQuery();
+  const { data: services = [] } = useServicesQuery();
+  const createBookingMutation = useCreateBookingMutation();
 
   const [step, setStep] = useState(1);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    PREVIEW_VEHICLES[0]?.id || ''
+    vehicles[0]?.id || PREVIEW_VEHICLES[0]?.id || ''
   );
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([
-    PREVIEW_SERVICES[0]?.id || '',
+    services[0]?.id || PREVIEW_SERVICES[0]?.id || '',
   ]);
   const [scheduledDate, setScheduledDate] = useState<string>('2026-11-24');
   const [scheduledTime, setScheduledTime] = useState<string>(TIME_SLOTS[1]);
   const [problemDescription, setProblemDescription] = useState<string>('');
   const [isSuccessModal, setIsSuccessModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const selectedVehicle = PREVIEW_VEHICLES.find(v => v.id === selectedVehicleId);
-  const selectedServices = PREVIEW_SERVICES.filter(s =>
+  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId) || PREVIEW_VEHICLES.find(v => v.id === selectedVehicleId);
+  const selectedServices = services.filter(s =>
     selectedServiceIds.includes(s.id)
   );
 
@@ -61,7 +66,7 @@ export default function BookingScreen() {
     );
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1 && !selectedVehicleId) {
       Alert.alert('Perhatian', 'Silakan pilih kendaraan yang akan diservis.');
       return;
@@ -73,7 +78,26 @@ export default function BookingScreen() {
     if (step < 4) {
       setStep(s => s + 1);
     } else {
-      setIsSuccessModal(true);
+      setSubmitting(true);
+      try {
+        await createBookingMutation.mutateAsync({
+          vehicleId: selectedVehicleId,
+          vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : 'Mobil',
+          licensePlate: selectedVehicle?.licensePlate || '',
+          serviceIds: selectedServiceIds,
+          serviceNames: selectedServices.map(s => s.name),
+          totalPrice,
+          totalDurationMinutes: totalDuration,
+          scheduledDate,
+          scheduledTimeSlot: scheduledTime,
+          problemDescription: problemDescription.trim() || 'Servis berkala Meltune Auto',
+        });
+        setIsSuccessModal(true);
+      } catch (err: any) {
+        Alert.alert('Gagal Membuat Reservasi', err?.message || 'Terjadi kesalahan sistem.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -149,7 +173,7 @@ export default function BookingScreen() {
           </View>
 
           <DividedList
-            data={PREVIEW_VEHICLES}
+            data={vehicles}
             keyExtractor={item => item.id}
             withOuterBorders
             renderItem={v => {
@@ -207,7 +231,7 @@ export default function BookingScreen() {
           </View>
 
           <DividedList
-            data={PREVIEW_SERVICES}
+            data={services}
             keyExtractor={item => item.id}
             withOuterBorders
             renderItem={s => {
@@ -408,6 +432,7 @@ export default function BookingScreen() {
         <PrimaryButton
           title={step === 4 ? 'Konfirmasi Reservasi Workbay' : 'Lanjutkan Langkah'}
           onPress={handleNext}
+          loading={submitting}
           size="lg"
         />
       </View>

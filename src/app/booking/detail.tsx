@@ -23,15 +23,20 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PREVIEW_BOOKINGS } from '@/services/previewData';
+import { useBookingsQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function BookingDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { data: bookings = PREVIEW_BOOKINGS } = useBookingsQuery();
 
+  const bookingId = String(params.id || '');
   const booking =
-    PREVIEW_BOOKINGS.find(b => b.id === params.id) || PREVIEW_BOOKINGS[0];
+    bookings.find(b => b.id === bookingId) ||
+    PREVIEW_BOOKINGS.find(b => b.id === bookingId) ||
+    bookings[0];
 
   return (
     <GradientBackground variant="subtleIvory">

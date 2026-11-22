@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { ShoppingBag, ChevronRight, Package, Clock } from 'lucide-react-native';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useOrdersQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 const PREVIEW_ORDERS = [
@@ -25,6 +27,7 @@ const PREVIEW_ORDERS = [
     totalAmount: 2135000,
     status: 'ready_for_pickup' as const,
     date: '20 Nov 2026',
+    createdAt: '2026-11-20T10:00:00Z',
     shippingMethod: 'Pengambilan di Workshop BSD',
   },
   {
@@ -36,6 +39,7 @@ const PREVIEW_ORDERS = [
     totalAmount: 2450000,
     status: 'completed' as const,
     date: '10 Okt 2026',
+    createdAt: '2026-10-10T08:30:00Z',
     shippingMethod: 'Pengambilan di Workshop BSD',
   },
 ];
@@ -43,6 +47,16 @@ const PREVIEW_ORDERS = [
 export default function OrderHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: remoteOrders = [], refetch } = useOrdersQuery();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const orders = remoteOrders.length > 0 ? remoteOrders : PREVIEW_ORDERS;
 
   return (
     <GradientBackground variant="subtleIvory">
@@ -55,50 +69,74 @@ export default function OrderHistoryScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={MeltuneColors.burntOrange}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xxl },
         ]}
       >
         <View style={styles.list}>
-          {PREVIEW_ORDERS.map(order => (
-            <View key={order.id} style={[styles.orderCard, Shadows.subtle]}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.orderNum}>{order.orderNumber}</Text>
-                  <Text style={styles.orderDate}>{order.date}</Text>
-                </View>
-                <StatusBadge status={order.status} />
-              </View>
+          {orders.map(order => {
+            const rawOrder = order as any;
+            const orderDate =
+              rawOrder.date ||
+              (rawOrder.createdAt
+                ? new Date(rawOrder.createdAt).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : 'Hari ini');
 
-              <View style={styles.itemsList}>
-                {order.items.map((it, idx) => (
-                  <View key={idx} style={styles.itemRow}>
-                    <Text style={styles.itemName} numberOfLines={1}>
-                      {it.quantity}x {it.name}
-                    </Text>
-                    <Text style={styles.itemSubtotal}>
-                      Rp {(it.price * it.quantity).toLocaleString('id-ID')}
+            return (
+              <View key={order.id} style={[styles.orderCard, Shadows.subtle]}>
+                <View style={styles.cardHeader}>
+                  <View>
+                    <Text style={styles.orderNum}>{order.orderNumber}</Text>
+                    <Text style={styles.orderDate}>{orderDate}</Text>
+                  </View>
+                  <StatusBadge status={order.status} />
+                </View>
+
+                <View style={styles.itemsList}>
+                  {order.items.map((it: any, idx: number) => {
+                    const itemName = it.productName || it.name || 'Suku Cadang';
+
+                    return (
+                      <View key={idx} style={styles.itemRow}>
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {it.quantity}x {itemName}
+                        </Text>
+                        <Text style={styles.itemSubtotal}>
+                          Rp {(it.price * it.quantity).toLocaleString('id-ID')}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.cardFooter}>
+                  <View style={styles.methodBox}>
+                    <Package size={13} color={MeltuneColors.textMutedLight} />
+                    <Text style={styles.methodText}>{order.shippingMethod}</Text>
+                  </View>
+
+                  <View style={styles.totalBox}>
+                    <Text style={styles.totalLabel}>TOTAL</Text>
+                    <Text style={styles.totalValue}>
+                      Rp {order.totalAmount.toLocaleString('id-ID')}
                     </Text>
                   </View>
-                ))}
-              </View>
-
-              <View style={styles.cardFooter}>
-                <View style={styles.methodBox}>
-                  <Package size={13} color={MeltuneColors.textMutedLight} />
-                  <Text style={styles.methodText}>{order.shippingMethod}</Text>
-                </View>
-
-                <View style={styles.totalBox}>
-                  <Text style={styles.totalLabel}>TOTAL</Text>
-                  <Text style={styles.totalValue}>
-                    Rp {order.totalAmount.toLocaleString('id-ID')}
-                  </Text>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </GradientBackground>

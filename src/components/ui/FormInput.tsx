@@ -37,12 +37,9 @@ export const FormInput: React.FC<FormInputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* Label Row with optional technical reference tag */}
+      {/* Label Row */}
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
-        {technicalCode && (
-          <Text style={styles.technicalCode}>// {technicalCode}</Text>
-        )}
       </View>
 
       {/* Input Box */}

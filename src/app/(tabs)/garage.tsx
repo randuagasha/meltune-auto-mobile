@@ -1,21 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { VehicleCard } from '@/components/vehicle/VehicleCard';
-import { PREVIEW_VEHICLES } from '@/services/previewData';
+import { useVehiclesQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
 export default function GarageScreen() {
   const router = useRouter();
+  const { data: vehicles = [], refetch } = useVehiclesQuery();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const totalOdometer = PREVIEW_VEHICLES.reduce(
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const totalOdometer = vehicles.reduce(
     (sum, v) => sum + (v.mileage || 0),
     0
   );
@@ -37,16 +46,23 @@ export default function GarageScreen() {
 
   return (
     <AmbientGradientShell
-      tag="CUSTOMER GARAGE // BSD"
+      tag="GARASI KENDARAAN"
       title="Garasi Saya"
       subtitle="Koleksi kendaraan dan rekam jejak servis"
       headerRight={renderHeaderRight()}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={MeltuneColors.burntOrange}
+        />
+      }
     >
       {/* 1. Minimal Fleet Summary Strip */}
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Total Armada</Text>
-          <Text style={styles.summaryValue}>{PREVIEW_VEHICLES.length} Unit</Text>
+          <Text style={styles.summaryValue}>{vehicles.length} Unit</Text>
         </View>
 
         <View style={styles.summaryDivider} />
@@ -70,7 +86,7 @@ export default function GarageScreen() {
 
       {/* 2. Vehicle Collection Items */}
       <View style={styles.vehicleListContainer}>
-        {PREVIEW_VEHICLES.map(vehicle => (
+        {vehicles.map(vehicle => (
           <VehicleCard
             key={vehicle.id}
             vehicle={vehicle}

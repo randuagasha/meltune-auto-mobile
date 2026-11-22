@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,31 +15,47 @@ import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackgr
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PREVIEW_LOYALTY, PREVIEW_REWARDS } from '@/services/previewData';
+import {
+  useLoyaltyProfileQuery,
+  useLoyaltyRewardsQuery,
+  useDailyCheckInMutation,
+  useRedeemRewardMutation,
+} from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function LoyaltyScreen() {
   const insets = useSafeAreaInsets();
 
-  const [points, setPoints] = useState(PREVIEW_LOYALTY.points);
-  const [streak, setStreak] = useState(PREVIEW_LOYALTY.currentStreak);
-  const [checkedInToday, setCheckedInToday] = useState(false);
+  const { data: loyalty = PREVIEW_LOYALTY, refetch } = useLoyaltyProfileQuery();
+  const { data: rewards = PREVIEW_REWARDS } = useLoyaltyRewardsQuery();
+  const checkInMutation = useDailyCheckInMutation();
+  const redeemMutation = useRedeemRewardMutation();
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleCheckIn = () => {
-    if (checkedInToday) {
-      Alert.alert('Info', 'Anda sudah melakukan check-in streak hari ini.');
-      return;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      const res = await checkInMutation.mutateAsync();
+      Alert.alert(
+        res.success ? 'Streak Berhasil!' : 'Info Check-In',
+        res.message || 'Streak harian berhasil dicatat.'
+      );
+    } catch (err: any) {
+      Alert.alert('Gagal Check-In', err?.message || 'Terjadi kesalahan.');
+    } finally {
+      setCheckingIn(false);
     }
-    setCheckedInToday(true);
-    setStreak(s => s + 1);
-    setPoints(p => p + 25);
-    Alert.alert(
-      'Streak Berhasil!',
-      'Streak harian Anda bertambah menjadi ' + (streak + 1) + ' hari! Anda memperoleh +25 Poin.'
-    );
   };
 
   const handleRedeem = (reward: any) => {
-    if (points < reward.pointsCost) {
+    if (loyalty.points < reward.pointsCost) {
       Alert.alert('Poin Tidak Cukup', 'Saldo poin Anda belum mencukupi untuk reward ini.');
       return;
     }
@@ -50,12 +67,16 @@ export default function LoyaltyScreen() {
         { text: 'Batal', style: 'cancel' },
         {
           text: 'Tukar Sekarang',
-          onPress: () => {
-            setPoints(p => p - reward.pointsCost);
-            Alert.alert(
-              'Penukaran Berhasil!',
-              `Kode Voucher Anda: MLT-${Math.random().toString(36).substring(2, 8).toUpperCase()}\nTunjukkan kode ini saat kedatangan di workshop.`
-            );
+          onPress: async () => {
+            try {
+              const res = await redeemMutation.mutateAsync(reward.id);
+              Alert.alert(
+                'Penukaran Berhasil!',
+                `Kode Voucher Anda: ${res.code || 'MLT-' + Math.random().toString(36).substring(2, 8).toUpperCase()}\nTunjukkan kode ini saat kedatangan di workshop.`
+              );
+            } catch (err: any) {
+              Alert.alert('Gagal Menukar Reward', err?.message || 'Terjadi kesalahan.');
+            }
           },
         },
       ]
@@ -73,6 +94,13 @@ export default function LoyaltyScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={MeltuneColors.burntOrange}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xxl },
@@ -86,8 +114,8 @@ export default function LoyaltyScreen() {
                 <Flame size={18} color={MeltuneColors.burntOrange} />
                 <Text style={styles.badgeLabel}>DAILY STREAK</Text>
               </View>
-              <Text style={styles.streakValue}>{streak} Hari</Text>
-              <Text style={styles.streakDesc}>Rekor: {PREVIEW_LOYALTY.longestStreak} Hari</Text>
+              <Text style={styles.streakValue}>{loyalty.currentStreak} Hari</Text>
+              <Text style={styles.streakDesc}>Rekor: {loyalty.longestStreak} Hari</Text>
             </View>
 
             <View style={styles.heroDivider} />
@@ -97,16 +125,16 @@ export default function LoyaltyScreen() {
                 <Sparkles size={18} color={MeltuneColors.burntOrange} />
                 <Text style={styles.badgeLabel}>SALDO POIN</Text>
               </View>
-              <Text style={styles.pointsValue}>{points}</Text>
+              <Text style={styles.pointsValue}>{loyalty.points}</Text>
               <Text style={styles.pointsDesc}>Tersedia ditukar</Text>
             </View>
           </View>
 
           {/* Daily Check-in Button */}
           <PrimaryButton
-            title={checkedInToday ? '✓ Sudah Check-In Hari Ini' : 'Lakukan Check-In Hari Ini (+25 Poin)'}
+            title="Lakukan Check-In Hari Ini (+25 Poin)"
             onPress={handleCheckIn}
-            disabled={checkedInToday}
+            loading={checkingIn}
             style={styles.checkInButton}
             icon={<Flame size={16} color={MeltuneColors.white} />}
           />
@@ -116,7 +144,7 @@ export default function LoyaltyScreen() {
         <View style={styles.tierCard}>
           <ShieldCheck size={20} color={MeltuneColors.burntOrange} />
           <View style={styles.tierInfo}>
-            <Text style={styles.tierTitle}>Tingkat Member: {PREVIEW_LOYALTY.tierName}</Text>
+            <Text style={styles.tierTitle}>Tingkat Member: {loyalty.tierName}</Text>
             <Text style={styles.tierSub}>
               Dapatkan diskon 10% untuk seluruh chemical detailing dan prioritas alokasi Workbay 2.
             </Text>
@@ -131,8 +159,8 @@ export default function LoyaltyScreen() {
           </Text>
 
           <View style={styles.rewardsList}>
-            {PREVIEW_REWARDS.map(reward => {
-              const canAfford = points >= reward.pointsCost;
+            {rewards.map(reward => {
+              const canAfford = loyalty.points >= reward.pointsCost;
               return (
                 <View key={reward.id} style={[styles.rewardCard, Shadows.subtle]}>
                   <Image

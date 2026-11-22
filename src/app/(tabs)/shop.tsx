@@ -6,12 +6,14 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, ShoppingBag, ArrowRight } from 'lucide-react-native';
 import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { ProductCard } from '@/components/product/ProductCard';
 import { PREVIEW_PRODUCTS } from '@/services/previewData';
+import { useProductsQuery } from '@/hooks/useWorkshopData';
 import { useCartStore } from '@/stores/cartStore';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
@@ -29,11 +31,23 @@ export default function ShopScreen() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
+  const { data: products = [], refetch } = useProductsQuery({
+    category: selectedCategory,
+    search: search.trim() || undefined,
+  });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
   const { items, addItem, getTotalCount, getTotalAmount } = useCartStore();
   const totalCartCount = getTotalCount();
   const totalCartAmount = getTotalAmount();
 
-  const filteredProducts = PREVIEW_PRODUCTS.filter(p => {
+  const filteredProducts = products.filter(p => {
     const matchCategory =
       selectedCategory === 'all' || p.category === selectedCategory;
     const matchSearch =
@@ -64,10 +78,17 @@ export default function ShopScreen() {
 
   return (
     <AmbientGradientShell
-      tag="AUTHENTIC PARTS // BSD"
+      tag="KATALOG SUKU CADANG"
       title="Toko Suku Cadang"
       subtitle="Pelumas performa dan suku cadang asli OEM"
       headerRight={renderHeaderRight()}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={MeltuneColors.burntOrange}
+        />
+      }
     >
       {/* 1. Search Bar */}
       <View style={styles.searchSection}>

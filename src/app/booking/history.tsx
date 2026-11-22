@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,17 +14,32 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PREVIEW_BOOKINGS } from '@/services/previewData';
+import { useBookingsQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
 export default function BookingHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: bookings = PREVIEW_BOOKINGS, refetch } = useBookingsQuery();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'completed' | 'active'>('all');
 
-  const filteredBookings = PREVIEW_BOOKINGS.filter(b => {
+  const filteredBookings = bookings.filter(b => {
     if (activeFilter === 'completed') return b.status === 'completed';
-    if (activeFilter === 'active') return b.status === 'in_progress' || b.status === 'pending';
+    if (activeFilter === 'active')
+      return (
+        b.status === 'in_progress' ||
+        b.status === 'pending' ||
+        b.status === 'confirmed' ||
+        b.status === 'waiting_for_parts'
+      );
     return true;
   });
 
@@ -68,6 +84,13 @@ export default function BookingHistoryScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={MeltuneColors.burntOrange}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xxl },

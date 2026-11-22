@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -23,10 +24,21 @@ import { EditorialSection } from '@/components/ui/EditorialSection';
 import { DividedList } from '@/components/ui/DividedList';
 import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
 import { PREVIEW_USER, PREVIEW_LOYALTY } from '@/services/previewData';
+import { useAuthStore } from '@/stores/authStore';
+import { useLoyaltyProfileQuery } from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, logout } = useAuthStore();
+  const { data: loyalty = PREVIEW_LOYALTY, refetch } = useLoyaltyProfileQuery();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -37,7 +49,10 @@ export default function ProfileScreen() {
         {
           text: 'Keluar',
           style: 'destructive',
-          onPress: () => router.push('/(auth)/login'),
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/login');
+          },
         },
       ]
     );
@@ -71,9 +86,9 @@ export default function ProfileScreen() {
     {
       id: 'loyalty',
       title: 'Daily Streak & Poin Reward',
-      subtitle: `${PREVIEW_LOYALTY.points.toLocaleString('id-ID')} Poin • ${PREVIEW_LOYALTY.currentStreak} Hari Beruntun`,
+      subtitle: `${loyalty.points.toLocaleString('id-ID')} Poin • ${loyalty.currentStreak} Hari Beruntun`,
       icon: <Sparkles size={18} color={MeltuneColors.burntOrange} />,
-      badge: `${PREVIEW_LOYALTY.currentStreak} HARI`,
+      badge: `${loyalty.currentStreak} HARI`,
       badgeVariant: 'accent' as const,
       onPress: () => router.push('/loyalty'),
     },
@@ -98,9 +113,16 @@ export default function ProfileScreen() {
 
   return (
     <AmbientGradientShell
-      tag="CUSTOMER ID // 01"
+      tag="PROFIL PENGEMUDI"
       title="Akun & Profil"
       subtitle="Identitas pemilik dan preferensi aplikasi"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={MeltuneColors.burntOrange}
+        />
+      }
     >
       {/* 1. Driver Identity Block (Directly on the Surface) */}
       <View style={styles.identitySection}>
@@ -121,11 +143,11 @@ export default function ProfileScreen() {
 
           <View style={styles.identityDetails}>
             <View style={styles.tierPill}>
-              <Text style={styles.tierText}>{PREVIEW_LOYALTY.tierName}</Text>
+              <Text style={styles.tierText}>{loyalty.tierName}</Text>
             </View>
-            <Text style={styles.userName}>{PREVIEW_USER.fullName}</Text>
-            <Text style={styles.userEmail}>{PREVIEW_USER.email}</Text>
-            <Text style={styles.userPhone}>{PREVIEW_USER.phone}</Text>
+            <Text style={styles.userName}>{user?.fullName || PREVIEW_USER.fullName}</Text>
+            <Text style={styles.userEmail}>{user?.email || PREVIEW_USER.email}</Text>
+            <Text style={styles.userPhone}>{user?.phone || PREVIEW_USER.phone}</Text>
           </View>
         </View>
 
@@ -133,7 +155,7 @@ export default function ProfileScreen() {
         <View style={styles.metricRow}>
           <View style={styles.metricCell}>
             <Text style={styles.metricLabel}>Daily Streak</Text>
-            <Text style={styles.metricValue}>{PREVIEW_LOYALTY.currentStreak} Hari</Text>
+            <Text style={styles.metricValue}>{loyalty.currentStreak} Hari</Text>
           </View>
 
           <View style={styles.metricDivider} />
@@ -141,7 +163,7 @@ export default function ProfileScreen() {
           <View style={styles.metricCell}>
             <Text style={styles.metricLabel}>Saldo Poin</Text>
             <Text style={styles.metricValue}>
-              {PREVIEW_LOYALTY.points.toLocaleString('id-ID')} Poin
+              {loyalty.points.toLocaleString('id-ID')} Poin
             </Text>
           </View>
         </View>
