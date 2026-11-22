@@ -8,10 +8,8 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, ShoppingBag, ArrowRight } from 'lucide-react-native';
-import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackground';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { ProductCard } from '@/components/product/ProductCard';
 import { PREVIEW_PRODUCTS } from '@/services/previewData';
 import { useCartStore } from '@/stores/cartStore';
@@ -27,7 +25,6 @@ const CATEGORIES = [
 
 export default function ShopScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -45,34 +42,39 @@ export default function ShopScreen() {
     return matchCategory && matchSearch;
   });
 
-  return (
-    <AmbientGradientBackground preset="shopLuxury">
-      <AppHeader
-        title="Toko Suku Cadang"
-        subtitle="Pelumas Performa & Part OEM Tersertifikasi"
-        tag="AUTHENTIC PARTS // BSD"
-        rightAction={
-          <Pressable
-            onPress={() => router.push('/shop/cart')}
-            style={styles.cartHeaderButton}
-            accessibilityLabel="Shopping Cart"
-          >
-            <ShoppingBag size={20} color={MeltuneColors.charcoal} />
-            {totalCartCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{totalCartCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        }
-      />
+  const renderHeaderRight = () => (
+    <Pressable
+      onPress={() => router.push('/shop/cart')}
+      style={({ pressed }) => [
+        styles.cartHeaderButton,
+        pressed && styles.cartHeaderButtonPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel="Buka Keranjang"
+      hitSlop={10}
+    >
+      <ShoppingBag size={20} color={MeltuneColors.white} />
+      {totalCartCount > 0 && (
+        <View style={styles.cartBadge}>
+          <Text style={styles.cartBadgeText}>{totalCartCount}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
 
-      {/* Search Input Box */}
-      <View style={styles.searchContainer}>
+  return (
+    <AmbientGradientShell
+      tag="AUTHENTIC PARTS // BSD"
+      title="Toko Suku Cadang"
+      subtitle="Pelumas performa dan suku cadang asli OEM"
+      headerRight={renderHeaderRight()}
+    >
+      {/* 1. Search Bar */}
+      <View style={styles.searchSection}>
         <View style={styles.searchBox}>
           <Search size={18} color={MeltuneColors.textMutedLight} />
           <TextInput
-            placeholder="Cari suku cadang, oli mesin, nomor part OEM..."
+            placeholder="Cari oli mesin, kampas rem, filter udara..."
             placeholderTextColor={MeltuneColors.textMutedLight}
             value={search}
             onChangeText={setSearch}
@@ -81,12 +83,12 @@ export default function ShopScreen() {
         </View>
       </View>
 
-      {/* Category Filter Pills */}
-      <View style={styles.categoriesContainer}>
+      {/* 2. Category Filter Tabs */}
+      <View style={styles.categorySection}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesList}
+          contentContainerStyle={styles.categoryList}
         >
           {CATEGORIES.map(cat => {
             const isSelected = selectedCategory === cat.id;
@@ -95,14 +97,14 @@ export default function ShopScreen() {
                 key={cat.id}
                 onPress={() => setSelectedCategory(cat.id)}
                 style={[
-                  styles.categoryPill,
-                  isSelected && styles.categoryPillSelected,
+                  styles.categoryTab,
+                  isSelected && styles.categoryTabSelected,
                 ]}
               >
                 <Text
                   style={[
-                    styles.categoryPillText,
-                    isSelected && styles.categoryPillTextSelected,
+                    styles.categoryTabText,
+                    isSelected && styles.categoryTabTextSelected,
                   ]}
                 >
                   {cat.label}
@@ -113,42 +115,44 @@ export default function ShopScreen() {
         </ScrollView>
       </View>
 
-      {/* Products Grid */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: totalCartCount > 0 ? 150 : 90 + Spacing.xxl },
-        ]}
-      >
-        <View style={styles.productsGrid}>
-          {filteredProducts.map(product => {
-            const inCart = items.some(item => item.product.id === product.id);
-            return (
-              <ProductCard
-                key={product.id}
-                product={product}
-                isInCart={inCart}
-                onPress={() =>
-                  router.push({
-                    pathname: '/shop/detail',
-                    params: { id: product.id },
-                  })
-                }
-                onAddToCart={() => addItem(product)}
-              />
-            );
-          })}
-        </View>
-      </ScrollView>
+      {/* 3. Product Results Header */}
+      <View style={styles.resultsHeaderRow}>
+        <Text style={styles.resultsTitle}>
+          {selectedCategory === 'all'
+            ? 'Katalog Produk'
+            : CATEGORIES.find(c => c.id === selectedCategory)?.label}
+        </Text>
+        <Text style={styles.resultsCount}>{filteredProducts.length} Produk</Text>
+      </View>
 
-      {/* Floating Cart Bottom Bar */}
+      {/* 4. Product Items Grid */}
+      <View style={styles.productsGrid}>
+        {filteredProducts.map(product => {
+          const inCart = items.some(item => item.product.id === product.id);
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              isInCart={inCart}
+              onPress={() =>
+                router.push({
+                  pathname: '/shop/detail',
+                  params: { id: product.id },
+                })
+              }
+              onAddToCart={() => addItem(product)}
+            />
+          );
+        })}
+      </View>
+
+      {/* Floating Cart Checkout Bar (When Cart Has Items) */}
       {totalCartCount > 0 && (
         <View
           style={[
             styles.floatingCartBar,
-            Shadows.darkElevated,
-            { bottom: 65 + Spacing.sm },
+            Shadows.card,
+            { bottom: 65 + Spacing.lg },
           ]}
         >
           <View style={styles.floatingCartInfo}>
@@ -172,34 +176,35 @@ export default function ShopScreen() {
           </Pressable>
         </View>
       )}
-    </AmbientGradientBackground>
+    </AmbientGradientShell>
   );
 }
 
 const styles = StyleSheet.create({
   cartHeaderButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    backgroundColor: MeltuneColors.white,
+    width: 42,
+    height: 42,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
+  cartHeaderButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
   cartBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: 5,
+    right: 5,
     backgroundColor: MeltuneColors.burntOrange,
-    width: 17,
-    height: 17,
+    width: 16,
+    height: 16,
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: MeltuneColors.white,
   },
   cartBadgeText: {
     fontFamily: Typography.fontFamilyMono,
@@ -207,102 +212,115 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.white,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
+  searchSection: {
+    paddingHorizontal: Spacing.xl, // 24px consistent horizontal padding
+    marginBottom: Spacing.md,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.md,
+    borderRadius: Radius.xs,
     borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    paddingHorizontal: Spacing.md,
-    height: 44,
+    borderColor: 'rgba(36, 37, 34, 0.1)',
+    paddingHorizontal: Spacing.lg,
+    height: 48,
     gap: Spacing.sm,
   },
   searchInput: {
     flex: 1,
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
+    fontSize: Typography.size.body,
     color: MeltuneColors.charcoal,
   },
-  categoriesContainer: {
-    marginBottom: Spacing.md,
+  categorySection: {
+    marginBottom: Spacing.xl, // 24px
   },
-  categoriesList: {
-    paddingHorizontal: Spacing.lg,
+  categoryList: {
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.sm,
   },
-  categoryPill: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
+  categoryTab: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xs,
     borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
+    borderColor: 'rgba(36, 37, 34, 0.08)',
   },
-  categoryPillSelected: {
+  categoryTabSelected: {
     backgroundColor: MeltuneColors.charcoal,
     borderColor: MeltuneColors.charcoal,
   },
-  categoryPillText: {
+  categoryTabText: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.medium,
-    color: MeltuneColors.charcoal,
+    color: MeltuneColors.textSecondaryLight,
   },
-  categoryPillTextSelected: {
+  categoryTabTextSelected: {
     color: MeltuneColors.white,
     fontWeight: Typography.weight.bold,
   },
-  content: {
-    paddingHorizontal: Spacing.lg,
+  resultsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  resultsTitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.headline,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+  },
+  resultsCount: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    color: MeltuneColors.textMutedLight,
   },
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl, // 24px
   },
   floatingCartBar: {
     position: 'absolute',
-    left: Spacing.lg,
-    right: Spacing.lg,
+    left: Spacing.xl,
+    right: Spacing.xl,
     backgroundColor: MeltuneColors.charcoal,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.sm,
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: 'rgba(216, 198, 174, 0.3)',
   },
   floatingCartInfo: {
     flex: 1,
   },
   floatingCartCount: {
-    fontFamily: Typography.fontFamilyMono,
+    fontFamily: Typography.fontFamily,
     fontSize: Typography.size.micro,
     color: MeltuneColors.champagne,
-    letterSpacing: 0.5,
   },
   floatingCartTotal: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.extrabold,
+    fontFamily: Typography.fontFamilyMono,
+    fontSize: Typography.size.body,
+    fontWeight: Typography.weight.bold,
     color: MeltuneColors.white,
-    marginTop: 1,
+    marginTop: 2,
   },
   floatingCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: MeltuneColors.burntOrange,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.sm,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.xs,
   },
   floatingCartButtonPressed: {
     backgroundColor: MeltuneColors.orangePressed,

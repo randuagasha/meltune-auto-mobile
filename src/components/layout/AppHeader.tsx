@@ -96,8 +96,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.xl, // 24px consistent horizontal padding
+    paddingBottom: Spacing.lg,     // 16px bottom breathing room
   },
   containerLight: {
     backgroundColor: 'transparent',

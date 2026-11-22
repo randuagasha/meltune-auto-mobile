@@ -74,10 +74,25 @@ export const Spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 20,
-  xxl: 24,
-  xxxl: 32,
+  xl: 24,       // Standard screen horizontal padding & content group spacing
+  xxl: 32,      // Section separation (2XL)
+  xxxl: 40,     // Major visual separation (3XL)
+  xxxxl: 48,    // Hero and major section spacing (4XL)
   huge: 48,
+  giant: 64,    // Large editorial breathing room (5XL)
+
+  // Direct scale tokens from design principles
+  scale: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    '2xl': 32,
+    '3xl': 40,
+    '4xl': 48,
+    '5xl': 64,
+  },
 } as const;
 
 export const Radius = {
@@ -154,8 +169,32 @@ export const Shadows = {
   subtle: Platform.select({
     ios: {
       shadowColor: '#242522',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.02,
+      shadowRadius: 3,
+    },
+    android: {
+      elevation: 1,
+    },
+    default: {},
+  }),
+  card: Platform.select({
+    ios: {
+      shadowColor: '#242522',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.03,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 1,
+    },
+    default: {},
+  }),
+  darkElevated: Platform.select({
+    ios: {
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
+      shadowOpacity: 0.10,
       shadowRadius: 6,
     },
     android: {
@@ -163,39 +202,15 @@ export const Shadows = {
     },
     default: {},
   }),
-  card: Platform.select({
-    ios: {
-      shadowColor: '#242522',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-    },
-    android: {
-      elevation: 4,
-    },
-    default: {},
-  }),
-  darkElevated: Platform.select({
-    ios: {
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.35,
-      shadowRadius: 18,
-    },
-    android: {
-      elevation: 8,
-    },
-    default: {},
-  }),
   accentGlow: Platform.select({
     ios: {
       shadowColor: '#D96B3A',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
     },
     android: {
-      elevation: 6,
+      elevation: 2,
     },
     default: {},
   }),

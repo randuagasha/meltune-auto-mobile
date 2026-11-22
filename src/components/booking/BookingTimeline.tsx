@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { CheckCircle2, Clock, Circle } from 'lucide-react-native';
+import { Check, Clock, Circle } from 'lucide-react-native';
 import { ServiceStage } from '@/types';
 import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
@@ -22,13 +22,13 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
         <View style={styles.metaRow}>
           {workbayNumber && (
             <View style={styles.metaBadge}>
-              <Text style={styles.metaLabel}>WORKBAY</Text>
+              <Text style={styles.metaLabel}>STASIUN KERJA</Text>
               <Text style={styles.metaValue}>{workbayNumber}</Text>
             </View>
           )}
           {assignedMechanic && (
             <View style={styles.metaBadge}>
-              <Text style={styles.metaLabel}>TEKNISI JAGA</Text>
+              <Text style={styles.metaLabel}>KEPALA MEKANIK</Text>
               <Text style={styles.metaValue}>{assignedMechanic}</Text>
             </View>
           )}
@@ -41,24 +41,25 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
           const isCompleted = stage.status === 'completed';
           const isActive = stage.status === 'active';
           const isLast = index === stages.length - 1;
+          const stageCode = `STG-0${index + 1}`;
 
           return (
             <View key={stage.id} style={styles.stageItem}>
-              {/* Left Column: Icon and Vertical Connector */}
+              {/* Left Column: Technical Indicator and Line */}
               <View style={styles.indicatorColumn}>
                 <View
                   style={[
-                    styles.iconBox,
-                    isCompleted && styles.iconBoxCompleted,
-                    isActive && styles.iconBoxActive,
+                    styles.nodeBox,
+                    isCompleted && styles.nodeBoxCompleted,
+                    isActive && styles.nodeBoxActive,
                   ]}
                 >
                   {isCompleted ? (
-                    <CheckCircle2 size={16} color={MeltuneColors.statusSuccess} />
+                    <Check size={11} color={MeltuneColors.white} />
                   ) : isActive ? (
-                    <Clock size={16} color={MeltuneColors.burntOrange} />
+                    <View style={styles.activePulse} />
                   ) : (
-                    <Circle size={14} color={MeltuneColors.borderLight} />
+                    <View style={styles.pendingDot} />
                   )}
                 </View>
 
@@ -72,18 +73,22 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
                 )}
               </View>
 
-              {/* Right Column: Stage Description */}
+              {/* Right Column: Stage Details */}
               <View style={styles.stageContent}>
                 <View style={styles.stageHeader}>
-                  <Text
-                    style={[
-                      styles.stageName,
-                      isActive && styles.stageNameActive,
-                      isCompleted && styles.stageNameCompleted,
-                    ]}
-                  >
-                    {stage.name}
-                  </Text>
+                  <View style={styles.stageCodeRow}>
+                    <Text style={styles.stageCode}>{stageCode}</Text>
+                    <Text
+                      style={[
+                        styles.stageName,
+                        isActive && styles.stageNameActive,
+                        isCompleted && styles.stageNameCompleted,
+                      ]}
+                    >
+                      {stage.name}
+                    </Text>
+                  </View>
+
                   {stage.timestamp && (
                     <Text style={styles.timestamp}>{stage.timestamp}</Text>
                   )}
@@ -93,7 +98,7 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
 
                 {stage.technicianNotes && (
                   <View style={styles.notesBox}>
-                    <Text style={styles.notesPrefix}>CATATAN TEKNISI:</Text>
+                    <Text style={styles.notesPrefix}>CATATAN TEKNISI // BSD:</Text>
                     <Text style={styles.notesText}>{stage.technicianNotes}</Text>
                   </View>
                 )}
@@ -109,73 +114,90 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xs,
     borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    padding: Spacing.lg,
+    borderColor: 'rgba(36, 37, 34, 0.12)',
+    padding: Spacing.md,
   },
   metaRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-    paddingBottom: Spacing.md,
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: MeltuneColors.borderLight,
+    borderBottomColor: 'rgba(36, 37, 34, 0.08)',
   },
   metaBadge: {
     flex: 1,
     backgroundColor: MeltuneColors.surfaceLightElevated,
-    padding: Spacing.sm,
-    borderRadius: Radius.sm,
+    paddingVertical: Spacing.xs + 2,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.06)',
   },
   metaLabel: {
     fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
+    fontSize: 8,
     color: MeltuneColors.textMutedLight,
     letterSpacing: 1,
   },
   metaValue: {
-    fontFamily: Typography.fontFamily,
+    fontFamily: Typography.fontFamilyMono,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.charcoal,
     marginTop: 2,
   },
   timelineList: {
-    paddingLeft: Spacing.xs,
+    paddingLeft: Spacing.xxs,
   },
   stageItem: {
     flexDirection: 'row',
-    minHeight: 64,
+    minHeight: 56,
   },
   indicatorColumn: {
     alignItems: 'center',
-    width: 28,
+    width: 22,
   },
-  iconBox: {
-    width: 24,
-    height: 24,
+  nodeBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.25)',
+    backgroundColor: MeltuneColors.surfaceLightElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.pill,
-    backgroundColor: MeltuneColors.surfaceLightElevated,
   },
-  iconBoxCompleted: {
-    backgroundColor: MeltuneColors.statusSuccessBg,
+  nodeBoxCompleted: {
+    backgroundColor: MeltuneColors.charcoal,
+    borderColor: MeltuneColors.charcoal,
   },
-  iconBoxActive: {
-    backgroundColor: '#FFEDD5',
-    borderWidth: 1.5,
+  nodeBoxActive: {
+    backgroundColor: 'rgba(217, 107, 58, 0.15)',
     borderColor: MeltuneColors.burntOrange,
+  },
+  activePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    backgroundColor: MeltuneColors.burntOrange,
+  },
+  pendingDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 1,
+    backgroundColor: 'rgba(36, 37, 34, 0.25)',
   },
   connectorLine: {
     flex: 1,
-    width: 2,
-    backgroundColor: MeltuneColors.borderLight,
-    marginVertical: 4,
+    width: 1,
+    backgroundColor: 'rgba(36, 37, 34, 0.12)',
+    marginVertical: 3,
   },
   connectorLineCompleted: {
-    backgroundColor: MeltuneColors.statusSuccess,
+    backgroundColor: MeltuneColors.charcoal,
   },
   stageContent: {
     flex: 1,
@@ -187,9 +209,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  stageCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stageCode: {
+    fontFamily: Typography.fontFamilyMono,
+    fontSize: 9,
+    color: MeltuneColors.burntOrange,
+    fontWeight: Typography.weight.bold,
+  },
   stageName: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.body,
+    fontSize: Typography.size.caption,
     fontWeight: Typography.weight.semibold,
     color: MeltuneColors.charcoal,
   },
@@ -199,18 +232,19 @@ const styles = StyleSheet.create({
   },
   stageNameCompleted: {
     color: MeltuneColors.charcoal,
+    fontWeight: Typography.weight.bold,
   },
   timestamp: {
     fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.micro,
+    fontSize: 9,
     color: MeltuneColors.textMutedLight,
   },
   stageDescription: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
+    fontSize: Typography.size.micro,
     color: MeltuneColors.textSecondaryLight,
     marginTop: 2,
-    lineHeight: Typography.lineHeight.caption,
+    lineHeight: 14,
   },
   notesBox: {
     backgroundColor: MeltuneColors.surfaceLightMuted,
@@ -222,13 +256,13 @@ const styles = StyleSheet.create({
   },
   notesPrefix: {
     fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.burntOrange,
     letterSpacing: 0.5,
   },
   notesText: {
-    fontFamily: Typography.fontFamily,
+    fontFamily: Typography.fontFamilyMono,
     fontSize: Typography.size.micro,
     color: MeltuneColors.charcoal,
     marginTop: 1,

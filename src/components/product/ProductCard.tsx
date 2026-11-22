@@ -23,31 +23,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        Shadows.card,
+        Shadows.subtle,
         pressed && styles.cardPressed,
       ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Produk ${product.name}`}
     >
+      {/* Product Image Area */}
       <View style={styles.imageContainer}>
         {product.imageUrl ? (
           <Image
             source={{ uri: product.imageUrl }}
             style={styles.image}
             contentFit="cover"
+            transition={200}
           />
         ) : (
-          <View style={styles.placeholder} />
-        )}
-
-        {product.partNumber && (
-          <View style={styles.partNumberTag}>
-            <Text style={styles.partNumberText}>{product.partNumber}</Text>
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>OEM</Text>
           </View>
         )}
       </View>
 
+      {/* Product Details */}
       <View style={styles.body}>
-        <Text style={styles.categoryTag}>
-          {product.category.replace('_', ' ').toUpperCase()}
+        <Text style={styles.categoryLabel}>
+          {product.category.replace('_', ' ')}
         </Text>
 
         <Text style={styles.title} numberOfLines={2}>
@@ -55,12 +56,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </Text>
 
         <View style={styles.priceRow}>
-          <View>
-            <Text style={styles.priceLabel}>HARGA OEM</Text>
-            <Text style={styles.price}>
-              Rp {product.price.toLocaleString('id-ID')}
-            </Text>
-          </View>
+          <Text style={styles.price}>
+            Rp {product.price.toLocaleString('id-ID')}
+          </Text>
 
           {onAddToCart && (
             <Pressable
@@ -73,7 +71,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 isInCart && styles.addButtonActive,
                 pressed && styles.addButtonPressed,
               ]}
-              accessibilityLabel={`Add ${product.name} to cart`}
+              accessibilityRole="button"
+              accessibilityLabel={`Tambah ${product.name} ke keranjang`}
+              hitSlop={8}
             >
               {isInCart ? (
                 <Check size={16} color={MeltuneColors.white} />
@@ -91,16 +91,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
+    borderColor: 'rgba(36, 37, 34, 0.08)',
     overflow: 'hidden',
-    width: '48%',
-    marginBottom: Spacing.md,
+    width: '47.5%',
+    marginBottom: Spacing.xl, // 24px between product rows
   },
   cardPressed: {
-    opacity: 0.95,
-    transform: [{ scale: 0.985 }],
+    opacity: 0.98,
+    transform: [{ scale: 0.99 }],
   },
   imageContainer: {
     width: '100%',
@@ -116,67 +116,53 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: MeltuneColors.surfaceLightElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  partNumberTag: {
-    position: 'absolute',
-    top: Spacing.xs,
-    left: Spacing.xs,
-    backgroundColor: 'rgba(36, 37, 34, 0.85)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.xs,
-  },
-  partNumberText: {
+  placeholderText: {
     fontFamily: Typography.fontFamilyMono,
-    fontSize: 8,
-    color: MeltuneColors.champagne,
+    fontSize: 12,
+    color: MeltuneColors.textMutedLight,
     fontWeight: Typography.weight.bold,
   },
   body: {
-    padding: Spacing.sm,
-    flex: 1,
+    padding: Spacing.md,
     justifyContent: 'space-between',
+    flex: 1,
   },
-  categoryTag: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    color: MeltuneColors.burntOrange,
-    fontWeight: Typography.weight.bold,
-    letterSpacing: 0.5,
-    marginBottom: 2,
+  categoryLabel: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    color: MeltuneColors.textMutedLight,
+    textTransform: 'capitalize',
+    marginBottom: 4,
   },
   title: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
-    fontWeight: Typography.weight.bold,
+    fontSize: Typography.size.caption, // 13-14px
+    fontWeight: Typography.weight.semibold,
     color: MeltuneColors.charcoal,
-    lineHeight: 16,
-    minHeight: 32,
+    lineHeight: 18,
+    minHeight: 36,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: Spacing.sm,
+    alignItems: 'center',
+    marginTop: Spacing.md,
     paddingTop: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: MeltuneColors.borderLight,
-  },
-  priceLabel: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 8,
-    color: MeltuneColors.textMutedLight,
   },
   price: {
-    fontFamily: Typography.fontFamily,
+    fontFamily: Typography.fontFamilyMono,
     fontSize: Typography.size.body,
-    fontWeight: Typography.weight.extrabold,
-    color: MeltuneColors.burntOrange,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+    flex: 1,
   },
   addButton: {
     width: 32,
     height: 32,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xs,
     backgroundColor: MeltuneColors.charcoal,
     alignItems: 'center',
     justifyContent: 'center',

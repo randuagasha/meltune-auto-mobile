@@ -3,691 +3,537 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Bell,
+  Clock,
+  ChevronRight,
   Car,
   ShoppingBag,
   Sparkles,
   History,
-  Clock,
-  ChevronRight,
-  ShieldCheck,
-  Flame,
+  Wrench,
 } from 'lucide-react-native';
-import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackground';
-import { VehicleHero } from '@/components/vehicle/VehicleHero';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Image } from 'expo-image';
+import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
+import { DividedList } from '@/components/ui/DividedList';
+import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
 import {
   PREVIEW_USER,
   PREVIEW_VEHICLES,
   PREVIEW_BOOKINGS,
   PREVIEW_SERVICES,
-  PREVIEW_LOYALTY,
 } from '@/services/previewData';
 import {
   MeltuneColors,
   Radius,
   Spacing,
   Typography,
-  Shadows,
 } from '@/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-
   const primaryVehicle = PREVIEW_VEHICLES[0];
   const activeBooking = PREVIEW_BOOKINGS.find(b => b.status === 'in_progress');
 
-  return (
-    <AmbientGradientBackground preset="homeAmbient" hasGlowAccent>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: Math.max(insets.top, 16) + Spacing.sm,
-            paddingBottom: 90 + Spacing.xl,
-          },
+  // Custom Header rendered on top of the Persistent Gradient Background
+  const renderHeader = () => (
+    <View style={styles.headerRow}>
+      <View style={styles.headerLeft}>
+        <Text style={styles.brandTag}>MELTUNE AUTO</Text>
+        <Text style={styles.greetingTitle}>
+          Selamat datang, <Text style={styles.userName}>{PREVIEW_USER.fullName}</Text>
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={() => router.push('/notifications')}
+        style={({ pressed }) => [
+          styles.notificationButton,
+          pressed && styles.notificationButtonPressed,
         ]}
+        accessibilityRole="button"
+        accessibilityLabel="Notifikasi"
+        hitSlop={10}
       >
-        {/* Top Editorial Header */}
-        <View style={styles.header}>
-          <View>
-            <View style={styles.technicalTagRow}>
-              <View style={styles.activeDot} />
-              <Text style={styles.technicalTag}>MELTUNE AUTO // WORKBAY BSD ONLINE</Text>
+        <Bell size={20} color={MeltuneColors.white} />
+        <View style={styles.unreadDot} />
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <AmbientGradientShell customHeader={renderHeader()}>
+      {/* 1. Primary Vehicle Showcase (Directly on the Surface) */}
+      {primaryVehicle && (
+        <View style={styles.vehicleShowcaseSection}>
+          <View style={styles.vehicleHeaderRow}>
+            <View>
+              <Text style={styles.vehicleModelName}>{primaryVehicle.model}</Text>
+              <Text style={styles.vehiclePlateSub}>
+                {primaryVehicle.licensePlate} • Tahun {primaryVehicle.year} • {primaryVehicle.mileage?.toLocaleString('id-ID')} km
+              </Text>
             </View>
-            <Text style={styles.greetingTitle}>
-              Selamat Datang,{'\n'}
-              <Text style={styles.greetingName}>{PREVIEW_USER.fullName}</Text>
-            </Text>
+
+            <Pressable
+              onPress={() => router.push('/garage')}
+              style={styles.garageLink}
+              hitSlop={8}
+            >
+              <Text style={styles.garageLinkText}>Garasi</Text>
+              <ChevronRight size={13} color={MeltuneColors.burntOrange} />
+            </Pressable>
           </View>
 
+          {/* Vehicle Photography Area */}
           <Pressable
-            onPress={() => router.push('/notifications')}
+            onPress={() => router.push('/garage')}
             style={({ pressed }) => [
-              styles.notificationButton,
-              pressed && styles.notificationButtonPressed,
+              styles.vehicleImageWrapper,
+              pressed && styles.vehicleImageWrapperPressed,
             ]}
-            accessibilityLabel="Notifications"
           >
-            <Bell size={20} color={MeltuneColors.charcoal} />
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>2</Text>
+            {primaryVehicle.imageUrl ? (
+              <Image
+                source={{ uri: primaryVehicle.imageUrl }}
+                style={styles.vehicleImage}
+                contentFit="cover"
+                transition={300}
+              />
+            ) : (
+              <View style={styles.vehicleImagePlaceholder}>
+                <Car size={36} color={MeltuneColors.textMutedLight} />
+              </View>
+            )}
+          </Pressable>
+
+          {/* Direct Service Booking Action */}
+          <Pressable
+            onPress={() => router.push('/booking')}
+            style={({ pressed }) => [
+              styles.primaryBookButton,
+              pressed && styles.primaryBookButtonPressed,
+            ]}
+          >
+            <Wrench size={16} color={MeltuneColors.white} />
+            <Text style={styles.primaryBookButtonText}>Reservasi Servis Mobil Ini</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* 2. Active Service Status Banner (When In Progress) */}
+      {activeBooking && (
+        <View style={styles.sectionSpacing}>
+          <Pressable
+            onPress={() => router.push('/booking/tracking')}
+            style={({ pressed }) => [
+              styles.activeBanner,
+              pressed && styles.activeBannerPressed,
+            ]}
+          >
+            <View style={styles.activeBannerTop}>
+              <View style={styles.activeTag}>
+                <View style={styles.pulseDot} />
+                <Text style={styles.activeTagText}>Pengerjaan Workbay Aktif</Text>
+              </View>
+              <Text style={styles.workbayTagText}>{activeBooking.workbayNumber}</Text>
+            </View>
+
+            <Text style={styles.activeServiceTitle}>{activeBooking.serviceNames[0]}</Text>
+
+            <View style={styles.activeBannerFooter}>
+              <View style={styles.activeTimeRow}>
+                <Clock size={13} color={MeltuneColors.burntOrange} />
+                <Text style={styles.activeTimeText}>Target Selesai: 12:30 WIB</Text>
+              </View>
+
+              <View style={styles.activeActionRow}>
+                <Text style={styles.activeActionText}>Pantau Status</Text>
+                <ChevronRight size={13} color={MeltuneColors.burntOrange} />
+              </View>
             </View>
           </Pressable>
         </View>
+      )}
 
-        {/* Featured Vehicle as Centerpiece */}
-        {primaryVehicle && (
-          <View style={styles.vehicleCenterpieceSection}>
-            <VehicleHero
-              vehicle={primaryVehicle}
-              onPress={() => router.push('/garage')}
-              onBookService={() => router.push('/booking')}
-              activeBookingStatus={activeBooking ? 'Pengerjaan Servis Aktif' : undefined}
-            />
-          </View>
-        )}
+      {/* 3. Quick Actions Row (Icon & Label Actions) */}
+      <View style={styles.sectionSpacing}>
+        <Text style={styles.sectionHeading}>Menu Akses Cepat</Text>
+        <View style={styles.quickActionsRow}>
+          <Pressable
+            onPress={() => router.push('/garage')}
+            style={({ pressed }) => [
+              styles.actionItem,
+              pressed && styles.actionItemPressed,
+            ]}
+          >
+            <View style={styles.actionIconCircle}>
+              <Car size={20} color={MeltuneColors.charcoal} strokeWidth={1.9} />
+            </View>
+            <Text style={styles.actionLabel}>Garasi</Text>
+          </Pressable>
 
-        {/* Active Booking Banner */}
-        {activeBooking && (
-          <View style={styles.sectionContainer}>
-            <Pressable
-              onPress={() => router.push('/booking/tracking')}
-              style={({ pressed }) => [
-                styles.liveTrackingCard,
-                Shadows.card,
-                pressed && styles.liveTrackingCardPressed,
-              ]}
-            >
-              <View style={styles.liveTrackingHeader}>
-                <View style={styles.liveBadgeRow}>
-                  <View style={styles.livePulseDot} />
-                  <Text style={styles.liveBadgeText}>LIVE SERVICE TRACKING</Text>
-                </View>
-                <Text style={styles.workbayTag}>{activeBooking.workbayNumber}</Text>
-              </View>
+          <Pressable
+            onPress={() => router.push('/shop')}
+            style={({ pressed }) => [
+              styles.actionItem,
+              pressed && styles.actionItemPressed,
+            ]}
+          >
+            <View style={styles.actionIconCircle}>
+              <ShoppingBag size={20} color={MeltuneColors.charcoal} strokeWidth={1.9} />
+            </View>
+            <Text style={styles.actionLabel}>Suku Cadang</Text>
+          </Pressable>
 
-              <Text style={styles.liveServiceTitle} numberOfLines={1}>
-                {activeBooking.serviceNames[0]}
-              </Text>
-
-              <Text style={styles.liveServiceTech}>
-                Teknisi: <Text style={styles.techBold}>{activeBooking.assignedMechanic}</Text>
-              </Text>
-
-              <View style={styles.liveTrackingFooter}>
-                <View style={styles.timeRow}>
-                  <Clock size={13} color={MeltuneColors.burntOrange} />
-                  <Text style={styles.timeText}>Target Selesai: 12:30 WIB</Text>
-                </View>
-                <View style={styles.trackingCta}>
-                  <Text style={styles.trackingCtaText}>Pantau Workbay</Text>
-                  <ChevronRight size={14} color={MeltuneColors.burntOrange} />
-                </View>
-              </View>
-            </Pressable>
-          </View>
-        )}
-
-        {/* Quick Access Matrix */}
-        <View style={styles.sectionContainer}>
-          <SectionHeader
-            eyebrow="Quick Navigation"
-            title="Akses Cepat Pengemudi"
-          />
-
-          <View style={styles.quickAccessGrid}>
-            <Pressable
-              onPress={() => router.push('/garage')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: '#F0ECE3' }]}>
-                <Car size={20} color={MeltuneColors.charcoal} />
-              </View>
-              <Text style={styles.quickTitle}>Garasi Saya</Text>
-              <Text style={styles.quickSubtitle}>{PREVIEW_VEHICLES.length} Mobil Terdaftar</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/shop')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: '#F0ECE3' }]}>
-                <ShoppingBag size={20} color={MeltuneColors.charcoal} />
-              </View>
-              <Text style={styles.quickTitle}>Toko Suku Cadang</Text>
-              <Text style={styles.quickSubtitle}>Oli & Part OEM</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/loyalty')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: '#FFEDD5' }]}>
-                <Flame size={20} color={MeltuneColors.burntOrange} />
-              </View>
-              <Text style={styles.quickTitle}>Streak & Poin</Text>
-              <Text style={styles.quickSubtitle}>{PREVIEW_LOYALTY.currentStreak} Hari Aktif</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/booking/history')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: '#F0ECE3' }]}>
-                <History size={20} color={MeltuneColors.charcoal} />
-              </View>
-              <Text style={styles.quickTitle}>Riwayat Servis</Text>
-              <Text style={styles.quickSubtitle}>Rekam Jejak</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Loyalty Streak Teaser Banner */}
-        <View style={styles.sectionContainer}>
           <Pressable
             onPress={() => router.push('/loyalty')}
             style={({ pressed }) => [
-              styles.loyaltyCard,
-              pressed && styles.loyaltyCardPressed,
+              styles.actionItem,
+              pressed && styles.actionItemPressed,
             ]}
           >
-            <View style={styles.loyaltyLeft}>
-              <View style={styles.loyaltyBadge}>
-                <Sparkles size={14} color={MeltuneColors.champagne} />
-                <Text style={styles.loyaltyBadgeText}>DAILY STREAK WORKSHOP</Text>
-              </View>
-              <Text style={styles.loyaltyHeading}>
-                Kumpulkan Poin untuk Voucher Servis & Part OEM
-              </Text>
-              <Text style={styles.loyaltySub}>
-                Saldo Poin Anda: <Text style={styles.loyaltyPointsBold}>{PREVIEW_LOYALTY.points} Poin</Text>
-              </Text>
+            <View style={styles.actionIconCircle}>
+              <Sparkles size={20} color={MeltuneColors.charcoal} strokeWidth={1.9} />
             </View>
+            <Text style={styles.actionLabel}>Poin & Streak</Text>
+          </Pressable>
 
-            <View style={styles.streakIndicator}>
-              <Flame size={28} color={MeltuneColors.burntOrange} />
-              <Text style={styles.streakNumber}>{PREVIEW_LOYALTY.currentStreak}</Text>
-              <Text style={styles.streakDays}>HARI</Text>
+          <Pressable
+            onPress={() => router.push('/booking/history')}
+            style={({ pressed }) => [
+              styles.actionItem,
+              pressed && styles.actionItemPressed,
+            ]}
+          >
+            <View style={styles.actionIconCircle}>
+              <History size={20} color={MeltuneColors.charcoal} strokeWidth={1.9} />
             </View>
+            <Text style={styles.actionLabel}>Riwayat</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* 4. Precision Care: Featured Workshop Services */}
+      <View style={styles.servicesSection}>
+        <View style={styles.servicesHeaderRow}>
+          <View>
+            <Text style={styles.sectionHeading}>Paket Servis Berkala</Text>
+            <Text style={styles.sectionSubHeading}>
+              Dikerjakan oleh teknisi bersertifikasi APM
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => router.push('/booking')}
+            style={styles.viewAllButton}
+            hitSlop={8}
+          >
+            <Text style={styles.viewAllText}>Semua</Text>
+            <ChevronRight size={13} color={MeltuneColors.burntOrange} />
           </Pressable>
         </View>
 
-        {/* Featured Workshop Services */}
-        <View style={styles.sectionContainer}>
-          <SectionHeader
-            eyebrow="Precision Care"
-            title="Paket Servis Unggulan"
-            subtitle="Pengerjaan presisi dengan peralatan standar APM dan teknisi bersertifikasi"
-            actionText="Lihat Semua"
-            onActionPress={() => router.push('/booking')}
-          />
-
-          <View style={styles.servicesList}>
-            {PREVIEW_SERVICES.slice(0, 3).map(service => (
-              <Pressable
-                key={service.id}
-                onPress={() => router.push('/booking')}
-                style={({ pressed }) => [
-                  styles.serviceCard,
-                  pressed && styles.serviceCardPressed,
-                ]}
-              >
-                <View style={styles.serviceHeaderRow}>
-                  <View style={styles.serviceCategoryBadge}>
-                    <Text style={styles.serviceCategoryText}>
-                      {service.category.toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.serviceDurationBadge}>
-                    <Clock size={11} color={MeltuneColors.textSecondaryLight} />
-                    <Text style={styles.serviceDurationText}>
-                      {service.estimatedDurationMinutes} Menit
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.serviceDesc} numberOfLines={2}>
-                  {service.description}
-                </Text>
-
-                <View style={styles.serviceFooter}>
-                  <Text style={styles.servicePrice}>
-                    Rp {service.price.toLocaleString('id-ID')}
-                  </Text>
-                  <View style={styles.bookSmallButton}>
-                    <Text style={styles.bookSmallText}>Pilih Servis</Text>
-                    <ChevronRight size={13} color={MeltuneColors.burntOrange} />
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Workshop Guarantee Notice */}
-        <View style={styles.guaranteeBox}>
-          <ShieldCheck size={22} color={MeltuneColors.burntOrange} />
-          <View style={styles.guaranteeTextColumn}>
-            <Text style={styles.guaranteeTitle}>Garansi Pengerjaan 30 Hari / 1.000 KM</Text>
-            <Text style={styles.guaranteeDesc}>
-              Setiap servis di workbay MELTUNE AUTO dilindungi garansi pengerjaan mekanik dan suku cadang asli.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-    </AmbientGradientBackground>
+        <DividedList
+          data={PREVIEW_SERVICES.slice(0, 3)}
+          keyExtractor={item => item.id}
+          withOuterBorders
+          renderItem={service => (
+            <TechnicalListRow
+              key={service.id}
+              title={service.name}
+              subtitle={service.description}
+              value={`Rp ${service.price.toLocaleString('id-ID')}`}
+              valueSub={`${service.estimatedDurationMinutes} menit`}
+              onPress={() => router.push('/booking')}
+            />
+          )}
+        />
+      </View>
+    </AmbientGradientShell>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: Spacing.none,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  technicalTagRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'space-between',
+    minHeight: 52,
   },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.pill,
-    backgroundColor: MeltuneColors.statusSuccess,
-    marginRight: 6,
+  headerLeft: {
+    flex: 1,
   },
-  technicalTag: {
+  brandTag: {
     fontFamily: Typography.fontFamilyMono,
     fontSize: 9,
     fontWeight: Typography.weight.bold,
-    color: MeltuneColors.burntOrange,
+    color: MeltuneColors.champagne,
     letterSpacing: 1.2,
+    marginBottom: 2,
   },
   greetingTitle: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.body,
-    color: MeltuneColors.textSecondaryLight,
+    fontSize: 22,
+    fontWeight: Typography.weight.regular,
+    color: 'rgba(255, 255, 255, 0.92)',
+    letterSpacing: -0.3,
   },
-  greetingName: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.title1,
-    fontWeight: Typography.weight.extrabold,
-    color: MeltuneColors.charcoal,
-    letterSpacing: Typography.letterSpacing.editorialHeading,
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    backgroundColor: MeltuneColors.white,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    ...Shadows.subtle,
-  },
-  notificationButtonPressed: {
-    backgroundColor: MeltuneColors.surfaceLightElevated,
-  },
-  unreadBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: MeltuneColors.burntOrange,
-    width: 17,
-    height: 17,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: MeltuneColors.white,
-  },
-  unreadCount: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
+  userName: {
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.white,
   },
-  vehicleCenterpieceSection: {
-    marginBottom: Spacing.lg,
-  },
-  sectionContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  liveTrackingCard: {
-    backgroundColor: MeltuneColors.surfaceDark,
-    borderRadius: Radius.lg,
+  notificationButton: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(217, 107, 58, 0.4)',
-    padding: Spacing.md,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginLeft: Spacing.md,
   },
-  liveTrackingCardPressed: {
+  notificationButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 8,
+    height: 8,
+    borderRadius: Radius.pill,
+    backgroundColor: MeltuneColors.burntOrange,
+    borderWidth: 1.5,
+    borderColor: MeltuneColors.white,
+  },
+  vehicleShowcaseSection: {
+    paddingHorizontal: Spacing.xl, // 24px consistent horizontal padding
+    marginBottom: Spacing.xxxl,    // 40px major visual separation
+  },
+  vehicleHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+  },
+  vehicleModelName: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 22,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+    letterSpacing: -0.4,
+  },
+  vehiclePlateSub: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    color: MeltuneColors.textSecondaryLight,
+    marginTop: 2,
+  },
+  garageLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingTop: 4,
+  },
+  garageLinkText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.semibold,
+    color: MeltuneColors.burntOrange,
+  },
+  vehicleImageWrapper: {
+    width: '100%',
+    height: 200,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    backgroundColor: MeltuneColors.surfaceLightElevated,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.08)',
+    marginBottom: Spacing.md,
+  },
+  vehicleImageWrapperPressed: {
+    opacity: 0.95,
+  },
+  vehicleImage: {
+    width: '100%',
+    height: '100%',
+  },
+  vehicleImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: MeltuneColors.surfaceLightElevated,
+  },
+  primaryBookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: MeltuneColors.burntOrange,
+    borderRadius: Radius.xs,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+    minHeight: 48,
+  },
+  primaryBookButtonPressed: {
+    backgroundColor: MeltuneColors.orangePressed,
+  },
+  primaryBookButtonText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.white,
+    letterSpacing: 0.3,
+  },
+  sectionSpacing: {
+    paddingHorizontal: Spacing.xl, // 24px
+    marginBottom: Spacing.xxxl,    // 40px major visual separation
+  },
+  activeBanner: {
+    backgroundColor: MeltuneColors.white,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 107, 58, 0.3)',
+    padding: Spacing.lg,
+  },
+  activeBannerPressed: {
     opacity: 0.96,
   },
-  liveTrackingHeader: {
+  activeBannerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.xs,
   },
-  liveBadgeRow: {
+  activeTag: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  livePulseDot: {
+  pulseDot: {
     width: 7,
     height: 7,
     borderRadius: Radius.pill,
     backgroundColor: MeltuneColors.burntOrange,
-    marginRight: 6,
   },
-  liveBadgeText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.burntOrange,
-    fontWeight: Typography.weight.bold,
-    letterSpacing: 0.8,
-  },
-  workbayTag: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.champagne,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.xs,
-  },
-  liveServiceTitle: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.white,
-    marginTop: 2,
-  },
-  liveServiceTech: {
+  activeTagText: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryDark,
-    marginTop: 2,
-  },
-  techBold: {
-    color: MeltuneColors.warmIvory,
     fontWeight: Typography.weight.semibold,
-  },
-  liveTrackingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  timeText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.champagne,
-  },
-  trackingCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  trackingCtaText: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
-    fontWeight: Typography.weight.bold,
     color: MeltuneColors.burntOrange,
   },
-  quickAccessGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
+  workbayTagText: {
+    fontFamily: Typography.fontFamilyMono,
+    fontSize: Typography.size.micro,
+    color: MeltuneColors.textSecondaryLight,
   },
-  quickAccessCard: {
-    width: '48.5%',
-    backgroundColor: MeltuneColors.white,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadows.subtle,
-  },
-  quickAccessCardPressed: {
-    backgroundColor: MeltuneColors.surfaceLightMuted,
-  },
-  quickIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+  activeServiceTitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.title3,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
     marginBottom: Spacing.sm,
+    lineHeight: 24,
   },
-  quickTitle: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.body,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.charcoal,
-  },
-  quickSubtitle: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.textSecondaryLight,
-    marginTop: 2,
-  },
-  loyaltyCard: {
-    backgroundColor: MeltuneColors.charcoal,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderDark,
-    padding: Spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  loyaltyCardPressed: {
-    opacity: 0.95,
-  },
-  loyaltyLeft: {
-    flex: 1,
-    paddingRight: Spacing.md,
-  },
-  loyaltyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: Spacing.xs,
-  },
-  loyaltyBadgeText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    color: MeltuneColors.champagne,
-    fontWeight: Typography.weight.bold,
-    letterSpacing: 1,
-  },
-  loyaltyHeading: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.white,
-    lineHeight: 20,
-  },
-  loyaltySub: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryDark,
-    marginTop: Spacing.xs,
-  },
-  loyaltyPointsBold: {
-    color: MeltuneColors.burntOrange,
-    fontWeight: Typography.weight.extrabold,
-    fontFamily: Typography.fontFamilyMono,
-  },
-  streakIndicator: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(217, 107, 58, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(217, 107, 58, 0.3)',
-    borderRadius: Radius.md,
-    width: 68,
-    height: 76,
-  },
-  streakNumber: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 20,
-    fontWeight: Typography.weight.extrabold,
-    color: MeltuneColors.white,
-    marginTop: 2,
-  },
-  streakDays: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 8,
-    color: MeltuneColors.champagne,
-    letterSpacing: 1,
-  },
-  servicesList: {
-    gap: Spacing.md,
-  },
-  serviceCard: {
-    backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    padding: Spacing.md,
-    ...Shadows.subtle,
-  },
-  serviceCardPressed: {
-    backgroundColor: MeltuneColors.surfaceLightMuted,
-  },
-  serviceHeaderRow: {
+  activeBannerFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  serviceCategoryBadge: {
-    backgroundColor: MeltuneColors.surfaceLightElevated,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.xs,
-  },
-  serviceCategoryText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    color: MeltuneColors.charcoal,
-    fontWeight: Typography.weight.bold,
-  },
-  serviceDurationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  serviceDurationText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.textSecondaryLight,
-  },
-  serviceName: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.charcoal,
-  },
-  serviceDesc: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryLight,
-    marginTop: Spacing.xs,
-    lineHeight: 18,
-  },
-  serviceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.md,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: MeltuneColors.borderLight,
+    borderTopColor: 'rgba(36, 37, 34, 0.08)',
   },
-  servicePrice: {
+  activeTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  activeTimeText: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.extrabold,
-    color: MeltuneColors.burntOrange,
+    fontSize: Typography.size.caption,
+    color: MeltuneColors.charcoal,
+    fontWeight: Typography.weight.medium,
   },
-  bookSmallButton: {
+  activeActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
   },
-  bookSmallText: {
+  activeActionText: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.burntOrange,
   },
-  guaranteeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: MeltuneColors.white,
-    marginHorizontal: Spacing.lg,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    gap: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  guaranteeTextColumn: {
-    flex: 1,
-  },
-  guaranteeTitle: {
+  sectionHeading: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
+    fontSize: Typography.size.headline,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.charcoal,
+    letterSpacing: -0.2,
   },
-  guaranteeDesc: {
+  sectionSubHeading: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.micro,
+    fontSize: Typography.size.caption,
     color: MeltuneColors.textSecondaryLight,
     marginTop: 2,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+  },
+  actionItem: {
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: Spacing.xs,
+  },
+  actionItemPressed: {
+    opacity: 0.75,
+  },
+  actionIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.sm,
+    backgroundColor: MeltuneColors.white,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  actionLabel: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    fontWeight: Typography.weight.semibold,
+    color: MeltuneColors.charcoal,
+    textAlign: 'center',
+  },
+  servicesSection: {
+    marginBottom: Spacing.xxxl,
+  },
+  servicesHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingBottom: 2,
+  },
+  viewAllText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.semibold,
+    color: MeltuneColors.burntOrange,
   },
 });

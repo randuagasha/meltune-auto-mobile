@@ -3,38 +3,35 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  User,
+  LogOut,
   Car,
   Calendar,
   ShoppingBag,
   Sparkles,
-  User,
-  MessageSquare,
-  LogOut,
-  ChevronRight,
-  ShieldCheck,
-  Flame,
+  Settings,
+  HelpCircle,
 } from 'lucide-react-native';
-import { AmbientGradientBackground } from '@/components/ui/AmbientGradientBackground';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
+import { EditorialSection } from '@/components/ui/EditorialSection';
+import { DividedList } from '@/components/ui/DividedList';
+import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
 import { PREVIEW_USER, PREVIEW_LOYALTY } from '@/services/previewData';
-import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
+import { MeltuneColors, Radius, Spacing, Typography } from '@/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     Alert.alert(
       'Konfirmasi Keluar',
-      'Apakah Anda yakin ingin keluar dari akun MELTUNE AUTO?',
+      'Apakah Anda yakin ingin keluar dari akun Meltune Auto?',
       [
         { text: 'Batal', style: 'cancel' },
         {
@@ -46,223 +43,214 @@ export default function ProfileScreen() {
     );
   };
 
-  const menuSections = [
+  const workshopItems = [
     {
-      title: 'AKTIVITAS WORKSHOP',
-      items: [
-        {
-          id: 'garage',
-          label: 'Garasi Kendaraan Saya',
-          subtitle: 'Spesifikasi mesin & rekomendasi oli',
-          icon: Car,
-          onPress: () => router.push('/garage'),
-        },
-        {
-          id: 'booking_history',
-          label: 'Riwayat Reservasi Servis',
-          subtitle: 'Log kedatangan workbay & catatan mekanik',
-          icon: Calendar,
-          onPress: () => router.push('/booking/history'),
-        },
-        {
-          id: 'orders',
-          label: 'Pesanan Suku Cadang',
-          subtitle: 'Status pengiriman & pengambilan toko',
-          icon: ShoppingBag,
-          onPress: () => router.push('/shop/orders'),
-        },
-      ],
+      id: 'garage',
+      title: 'Garasi Kendaraan',
+      subtitle: 'Spesifikasi mesin dan rekomendasi oli APM',
+      icon: <Car size={18} color={MeltuneColors.charcoal} />,
+      onPress: () => router.push('/garage'),
     },
     {
-      title: 'PROGRAM KEANGGOTAAN',
-      items: [
-        {
-          id: 'loyalty',
-          label: 'Daily Streak & Reward Poin',
-          subtitle: `${PREVIEW_LOYALTY.points} Poin siap ditukar voucher`,
-          icon: Sparkles,
-          onPress: () => router.push('/loyalty'),
-        },
-      ],
+      id: 'booking_history',
+      title: 'Riwayat Reservasi Servis',
+      subtitle: 'Catatan servis berkala dan log mekanik',
+      icon: <Calendar size={18} color={MeltuneColors.charcoal} />,
+      onPress: () => router.push('/booking/history'),
     },
     {
-      title: 'PENGATURAN & LAYANAN KONSULTASI',
-      items: [
-        {
-          id: 'edit_profile',
-          label: 'Edit Informasi Profil',
-          subtitle: 'Nama, nomor telepon, dan preferensi',
-          icon: User,
-          onPress: () => router.push('/profile/edit'),
-        },
-        {
-          id: 'support',
-          label: 'Pusat Bantuan & Service Advisor',
-          subtitle: 'Konsultasi teknis dengan advisor workshop',
-          icon: MessageSquare,
-          onPress: () => router.push('/support'),
-        },
-      ],
+      id: 'orders',
+      title: 'Pesanan Suku Cadang',
+      subtitle: 'Status pengiriman dan pengambilan toko',
+      icon: <ShoppingBag size={18} color={MeltuneColors.charcoal} />,
+      onPress: () => router.push('/shop/orders'),
+    },
+  ];
+
+  const rewardItems = [
+    {
+      id: 'loyalty',
+      title: 'Daily Streak & Poin Reward',
+      subtitle: `${PREVIEW_LOYALTY.points.toLocaleString('id-ID')} Poin • ${PREVIEW_LOYALTY.currentStreak} Hari Beruntun`,
+      icon: <Sparkles size={18} color={MeltuneColors.burntOrange} />,
+      badge: `${PREVIEW_LOYALTY.currentStreak} HARI`,
+      badgeVariant: 'accent' as const,
+      onPress: () => router.push('/loyalty'),
+    },
+  ];
+
+  const accountItems = [
+    {
+      id: 'edit_profile',
+      title: 'Informasi Akun',
+      subtitle: 'Ubah nama, nomor telepon, dan preferensi',
+      icon: <Settings size={18} color={MeltuneColors.charcoal} />,
+      onPress: () => router.push('/profile/edit'),
+    },
+    {
+      id: 'support',
+      title: 'Pusat Bantuan & Konsultasi',
+      subtitle: 'Konsultasi teknis dengan service advisor workshop',
+      icon: <HelpCircle size={18} color={MeltuneColors.charcoal} />,
+      onPress: () => router.push('/support'),
     },
   ];
 
   return (
-    <AmbientGradientBackground preset="profileLuxury">
-      <AppHeader
-        title="Profil Pengemudi"
-        subtitle="Identitas & Status Keanggotaan Meltune Auto"
-        tag="CUSTOMER ID // 01"
-      />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: 90 + Spacing.xxl },
-        ]}
-      >
-        {/* Profile Card Header */}
-        <View style={[styles.profileCard, Shadows.card]}>
-          <View style={styles.profileHeaderRow}>
-            <View style={styles.avatarBox}>
-              {PREVIEW_USER.avatarUrl ? (
-                <Image
-                  source={{ uri: PREVIEW_USER.avatarUrl }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <User size={30} color={MeltuneColors.white} />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.profileTextColumn}>
-              <View style={styles.tierBadge}>
-                <ShieldCheck size={12} color={MeltuneColors.burntOrange} />
-                <Text style={styles.tierBadgeText}>{PREVIEW_LOYALTY.tierName}</Text>
+    <AmbientGradientShell
+      tag="CUSTOMER ID // 01"
+      title="Akun & Profil"
+      subtitle="Identitas pemilik dan preferensi aplikasi"
+    >
+      {/* 1. Driver Identity Block (Directly on the Surface) */}
+      <View style={styles.identitySection}>
+        <View style={styles.identityRow}>
+          <View style={styles.avatarBox}>
+            {PREVIEW_USER.avatarUrl ? (
+              <Image
+                source={{ uri: PREVIEW_USER.avatarUrl }}
+                style={styles.avatarImage}
+                contentFit="cover"
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <User size={26} color={MeltuneColors.white} />
               </View>
-
-              <Text style={styles.userName}>{PREVIEW_USER.fullName}</Text>
-              <Text style={styles.userEmail}>{PREVIEW_USER.email}</Text>
-              <Text style={styles.userPhone}>{PREVIEW_USER.phone}</Text>
-            </View>
+            )}
           </View>
 
-          {/* Quick Metrics */}
-          <View style={styles.metricsBar}>
-            <View style={styles.metricItem}>
-              <View style={styles.metricIconBox}>
-                <Flame size={16} color={MeltuneColors.burntOrange} />
-              </View>
-              <View>
-                <Text style={styles.metricLabel}>DAILY STREAK</Text>
-                <Text style={styles.metricValue}>
-                  {PREVIEW_LOYALTY.currentStreak} Hari
-                </Text>
-              </View>
+          <View style={styles.identityDetails}>
+            <View style={styles.tierPill}>
+              <Text style={styles.tierText}>{PREVIEW_LOYALTY.tierName}</Text>
             </View>
-
-            <View style={styles.metricDivider} />
-
-            <View style={styles.metricItem}>
-              <View style={styles.metricIconBox}>
-                <Sparkles size={16} color={MeltuneColors.burntOrange} />
-              </View>
-              <View>
-                <Text style={styles.metricLabel}>SALDO POIN</Text>
-                <Text style={styles.metricValue}>
-                  {PREVIEW_LOYALTY.points} Poin
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.userName}>{PREVIEW_USER.fullName}</Text>
+            <Text style={styles.userEmail}>{PREVIEW_USER.email}</Text>
+            <Text style={styles.userPhone}>{PREVIEW_USER.phone}</Text>
           </View>
         </View>
 
-        {/* Menu Sections */}
-        {menuSections.map((section, sIndex) => (
-          <View key={sIndex} style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={[styles.menuCard, Shadows.subtle]}>
-              {section.items.map((item, iIndex) => {
-                const Icon = item.icon;
-                const isLast = iIndex === section.items.length - 1;
-
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={item.onPress}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      pressed && styles.menuItemPressed,
-                      !isLast && styles.menuItemBorder,
-                    ]}
-                  >
-                    <View style={styles.menuIconBox}>
-                      <Icon size={18} color={MeltuneColors.charcoal} />
-                    </View>
-
-                    <View style={styles.menuTextColumn}>
-                      <Text style={styles.menuLabel}>{item.label}</Text>
-                      {item.subtitle && (
-                        <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                      )}
-                    </View>
-
-                    <ChevronRight size={16} color={MeltuneColors.textMutedLight} />
-                  </Pressable>
-                );
-              })}
-            </View>
+        {/* Minimal Metric Bar */}
+        <View style={styles.metricRow}>
+          <View style={styles.metricCell}>
+            <Text style={styles.metricLabel}>Daily Streak</Text>
+            <Text style={styles.metricValue}>{PREVIEW_LOYALTY.currentStreak} Hari</Text>
           </View>
-        ))}
 
-        {/* Logout Button */}
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricCell}>
+            <Text style={styles.metricLabel}>Saldo Poin</Text>
+            <Text style={styles.metricValue}>
+              {PREVIEW_LOYALTY.points.toLocaleString('id-ID')} Poin
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 2. Workshop Activity */}
+      <EditorialSection
+        title="Aktivitas Workshop"
+        subtitle="Akses cepat ke garasi mobil dan log pengerjaan"
+      >
+        <DividedList
+          data={workshopItems}
+          keyExtractor={item => item.id}
+          withOuterBorders
+          renderItem={item => (
+            <TechnicalListRow
+              key={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              icon={item.icon}
+              onPress={item.onPress}
+            />
+          )}
+        />
+      </EditorialSection>
+
+      {/* 3. Membership Rewards */}
+      <EditorialSection
+        title="Keanggotaan & Hadiah"
+      >
+        <DividedList
+          data={rewardItems}
+          keyExtractor={item => item.id}
+          withOuterBorders
+          renderItem={item => (
+            <TechnicalListRow
+              key={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              icon={item.icon}
+              badge={item.badge}
+              badgeVariant={item.badgeVariant}
+              onPress={item.onPress}
+            />
+          )}
+        />
+      </EditorialSection>
+
+      {/* 4. Account Settings & Support */}
+      <EditorialSection
+        title="Pengaturan & Bantuan"
+      >
+        <DividedList
+          data={accountItems}
+          keyExtractor={item => item.id}
+          withOuterBorders
+          renderItem={item => (
+            <TechnicalListRow
+              key={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              icon={item.icon}
+              onPress={item.onPress}
+            />
+          )}
+        />
+      </EditorialSection>
+
+      {/* 5. Clean Logout Action */}
+      <View style={styles.logoutWrapper}>
         <Pressable
           onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutButton,
             pressed && styles.logoutButtonPressed,
           ]}
+          accessibilityRole="button"
+          accessibilityLabel="Keluar dari akun"
         >
           <LogOut size={16} color={MeltuneColors.statusDanger} />
           <Text style={styles.logoutText}>Keluar dari Akun</Text>
         </Pressable>
+      </View>
 
-        {/* App Version Info */}
-        <View style={styles.versionInfo}>
-          <Text style={styles.versionText}>MELTUNE AUTO MOBILE // V1.0.0 (EXP 58)</Text>
-          <Text style={styles.versionSub}>Workshop Manajemen Otomotif Berstandar APM</Text>
-        </View>
-      </ScrollView>
-    </AmbientGradientBackground>
+      {/* Minimal Colophon */}
+      <View style={styles.colophon}>
+        <Text style={styles.colophonText}>Meltune Auto Mobile • Versi 1.0.0</Text>
+      </View>
+    </AmbientGradientShell>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: Spacing.lg,
+  identitySection: {
+    paddingHorizontal: Spacing.xl, // 24px consistent horizontal padding
+    marginBottom: Spacing.xxxl,    // 40px major visual separation
   },
-  profileCard: {
-    backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  profileHeaderRow: {
+  identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   avatarBox: {
-    width: 68,
-    height: 68,
-    borderRadius: Radius.pill,
+    width: 64,
+    height: 64,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
     backgroundColor: MeltuneColors.charcoal,
-    marginRight: Spacing.md,
+    marginRight: Spacing.lg,
   },
   avatarImage: {
     width: '100%',
@@ -275,37 +263,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: MeltuneColors.charcoal,
   },
-  profileTextColumn: {
+  identityDetails: {
     flex: 1,
   },
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF7ED',
-    paddingHorizontal: 8,
+  tierPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(217, 107, 58, 0.1)',
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.xs,
-    alignSelf: 'flex-start',
-    gap: 4,
     marginBottom: 4,
   },
-  tierBadgeText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    fontWeight: Typography.weight.bold,
+  tierText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    fontWeight: Typography.weight.semibold,
     color: MeltuneColors.burntOrange,
   },
   userName: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.headline,
-    fontWeight: Typography.weight.extrabold,
+    fontSize: Typography.size.title3,
+    fontWeight: Typography.weight.bold,
     color: MeltuneColors.charcoal,
+    letterSpacing: -0.3,
   },
   userEmail: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
     color: MeltuneColors.textSecondaryLight,
-    marginTop: 1,
+    marginTop: 2,
   },
   userPhone: {
     fontFamily: Typography.fontFamilyMono,
@@ -313,140 +299,70 @@ const styles = StyleSheet.create({
     color: MeltuneColors.textMutedLight,
     marginTop: 2,
   },
-  metricsBar: {
+  metricRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: MeltuneColors.surfaceLightElevated,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  metricItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metricIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.xs,
     backgroundColor: MeltuneColors.white,
+    borderRadius: Radius.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.08)',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  metricCell: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.sm,
   },
   metricLabel: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 8,
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
     color: MeltuneColors.textMutedLight,
-    letterSpacing: 0.8,
+    marginBottom: 2,
   },
   metricValue: {
     fontFamily: Typography.fontFamilyMono,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.charcoal,
-    marginTop: 1,
   },
   metricDivider: {
     width: 1,
     height: 24,
-    backgroundColor: MeltuneColors.borderLight,
-    marginHorizontal: Spacing.sm,
+    backgroundColor: 'rgba(36, 37, 34, 0.08)',
   },
-  menuSection: {
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 10,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.textMutedLight,
-    letterSpacing: 1,
-    marginBottom: Spacing.xs,
-    paddingLeft: Spacing.xs,
-  },
-  menuCard: {
-    backgroundColor: MeltuneColors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: MeltuneColors.borderLight,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-  },
-  menuItemPressed: {
-    backgroundColor: MeltuneColors.surfaceLightElevated,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: MeltuneColors.borderLight,
-  },
-  menuIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    backgroundColor: MeltuneColors.surfaceLightElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  menuTextColumn: {
-    flex: 1,
-  },
-  menuLabel: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.body,
-    fontWeight: Typography.weight.semibold,
-    color: MeltuneColors.charcoal,
-  },
-  menuSubtitle: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.micro,
-    color: MeltuneColors.textSecondaryLight,
-    marginTop: 2,
+  logoutWrapper: {
+    paddingHorizontal: Spacing.xl, // 24px
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xxl,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     paddingVertical: Spacing.md,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
+    borderRadius: Radius.xs,
     borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: Radius.md,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xl,
+    borderColor: 'rgba(239, 68, 68, 0.18)',
+    minHeight: 48,
   },
   logoutButtonPressed: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
   logoutText: {
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.body,
-    fontWeight: Typography.weight.bold,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.semibold,
     color: MeltuneColors.statusDanger,
   },
-  versionInfo: {
+  colophon: {
     alignItems: 'center',
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
-  versionText: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: 9,
-    color: MeltuneColors.textMutedLight,
-    letterSpacing: 1,
-  },
-  versionSub: {
+  colophonText: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.micro,
     color: MeltuneColors.textMutedLight,
-    marginTop: 2,
   },
 });
