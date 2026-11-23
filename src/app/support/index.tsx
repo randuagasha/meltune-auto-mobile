@@ -40,7 +40,7 @@ export default function SupportCenterScreen() {
     <GradientBackground variant="subtleIvory">
       <AppHeader
         title="Service Advisor"
-        subtitle="Konsultasi Teknis & Workbay Meltune BSD"
+        subtitle="Konsultasi Teknis & Bengkel Meltune BSD"
         tag="LIVE ADVISOR DESK"
         showBack
       />

@@ -35,6 +35,8 @@ interface AuthState {
   setUser: (user: UserProfile | null) => void;
 }
 
+let authSubscriptionInitialized = false;
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
@@ -44,6 +46,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
 
   initializeAuth: async () => {
+    // Register live auth state change listener once
+    if (!authSubscriptionInitialized) {
+      authSubscriptionInitialized = true;
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.access_token) {
+          await saveAuthToken(session.access_token);
+          set(state => ({
+            token: session.access_token,
+            isAuthenticated: true,
+            user: state.user
+              ? { ...state.user, id: session.user.id, email: session.user.email || state.user.email }
+              : null,
+          }));
+        } else if (event === 'SIGNED_OUT') {
+          await removeAuthToken();
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+          });
+        }
+      });
+    }
+
     try {
       const {
         data: { session },

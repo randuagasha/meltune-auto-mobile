@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { supabase } from '@/lib/supabase';
 import {
   Vehicle,
   ServiceItem,

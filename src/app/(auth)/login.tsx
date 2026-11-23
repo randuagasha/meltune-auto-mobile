@@ -73,7 +73,7 @@ export default function LoginScreen() {
           <View style={styles.introBlock}>
             <Text style={styles.introHeading}>Portal Pelanggan</Text>
             <Text style={styles.introDesc}>
-              Masuk untuk memantau pengerjaan workbay secara real-time, jadwal servis berkala, dan penukaran reward loyalitas.
+              Masuk untuk memantau pengerjaan servis secara real-time, jadwal servis berkala, dan penukaran reward loyalitas.
             </Text>
           </View>
 

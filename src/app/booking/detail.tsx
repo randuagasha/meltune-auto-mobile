@@ -43,7 +43,7 @@ export default function BookingDetailScreen() {
       <AppHeader
         title="Detail Reservasi"
         subtitle={`Nomor Referensi: ${booking.bookingReference}`}
-        tag="WORKBAY SPECIFICATION"
+        tag="DETAIL LAYANAN SERVIS"
         showBack
       />
 
@@ -88,7 +88,7 @@ export default function BookingDetailScreen() {
                 <Text style={styles.liveBannerText}>Mobil Sedang Dalam Pengerjaan</Text>
               </View>
               <View style={styles.liveBannerRight}>
-                <Text style={styles.liveBannerCta}>Buka Live Workbay</Text>
+                <Text style={styles.liveBannerCta}>Pantau Progres Servis</Text>
                 <ChevronRight size={14} color={MeltuneColors.burntOrange} />
               </View>
             </Pressable>

@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Clock,
   CheckCircle2,
   Plus,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  AlertCircle,
 } from 'lucide-react-native';
 import { AmbientGradientShell } from '@/components/layout/AmbientGradientShell';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -19,10 +24,15 @@ import { FormInput } from '@/components/ui/FormInput';
 import { DividedList } from '@/components/ui/DividedList';
 import { TechnicalListRow } from '@/components/ui/TechnicalListRow';
 import { PREVIEW_VEHICLES, PREVIEW_SERVICES } from '@/services/previewData';
-import { useVehiclesQuery, useServicesQuery, useCreateBookingMutation } from '@/hooks/useWorkshopData';
+import {
+  useVehiclesQuery,
+  useServicesQuery,
+  useCreateBookingMutation,
+  useAvailableSlotsQuery,
+} from '@/hooks/useWorkshopData';
 import { MeltuneColors, Radius, Spacing, Typography, Shadows } from '@/theme';
 
-const TIME_SLOTS = [
+const FALLBACK_TIME_SLOTS = [
   '08:30 - 10:00',
   '10:00 - 11:30',
   '13:00 - 14:30',
@@ -30,27 +40,87 @@ const TIME_SLOTS = [
   '16:00 - 17:30',
 ];
 
+const MONTH_NAMES = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+
+const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+function formatDateToYMD(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function BookingScreen() {
   const router = useRouter();
   const { data: vehicles = [] } = useVehiclesQuery();
   const { data: services = [] } = useServicesQuery();
   const createBookingMutation = useCreateBookingMutation();
 
+  const now = new Date();
+  const todayYMD = formatDateToYMD(now);
+
   const [step, setStep] = useState(1);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    vehicles[0]?.id || PREVIEW_VEHICLES[0]?.id || ''
-  );
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([
-    services[0]?.id || PREVIEW_SERVICES[0]?.id || '',
-  ]);
-  const [scheduledDate, setScheduledDate] = useState<string>('2026-11-24');
-  const [scheduledTime, setScheduledTime] = useState<string>(TIME_SLOTS[1]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState<string>(todayYMD);
+  const [scheduledTime, setScheduledTime] = useState<string>(FALLBACK_TIME_SLOTS[1]);
   const [problemDescription, setProblemDescription] = useState<string>('');
   const [isSuccessModal, setIsSuccessModal] = useState(false);
+  const [createdBookingRef, setCreatedBookingRef] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
-  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId) || PREVIEW_VEHICLES.find(v => v.id === selectedVehicleId);
-  const selectedServices = services.filter(s =>
+  // Calendar month/year navigation state
+  const [viewYear, setViewYear] = useState<number>(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState<number>(now.getMonth());
+
+  // Available slots query for the selected date
+  const { data: slotsData, isLoading: loadingSlots } = useAvailableSlotsQuery(scheduledDate);
+
+  // Sync selected vehicle when vehicles load
+  useEffect(() => {
+    if (vehicles.length > 0) {
+      if (!selectedVehicleId || !vehicles.some(v => v.id === selectedVehicleId)) {
+        setSelectedVehicleId(vehicles[0].id);
+      }
+    } else if (PREVIEW_VEHICLES.length > 0 && !selectedVehicleId) {
+      setSelectedVehicleId(PREVIEW_VEHICLES[0].id);
+    }
+  }, [vehicles, selectedVehicleId]);
+
+  // Sync selected service when services load
+  useEffect(() => {
+    if (services.length > 0) {
+      if (
+        selectedServiceIds.length === 0 ||
+        !services.some(s => selectedServiceIds.includes(s.id))
+      ) {
+        setSelectedServiceIds([services[0].id]);
+      }
+    } else if (PREVIEW_SERVICES.length > 0 && selectedServiceIds.length === 0) {
+      setSelectedServiceIds([PREVIEW_SERVICES[0].id]);
+    }
+  }, [services, selectedServiceIds]);
+
+  const selectedVehicle =
+    vehicles.find(v => v.id === selectedVehicleId) ||
+    PREVIEW_VEHICLES.find(v => v.id === selectedVehicleId);
+
+  const activeServices = services.length > 0 ? services : PREVIEW_SERVICES;
+  const selectedServices = activeServices.filter(s =>
     selectedServiceIds.includes(s.id)
   );
 
@@ -66,6 +136,76 @@ export default function BookingScreen() {
     );
   };
 
+  // Calendar calculation
+  const canGoPrev =
+    viewYear > now.getFullYear() ||
+    (viewYear === now.getFullYear() && viewMonth > now.getMonth());
+
+  const handlePrevMonth = () => {
+    if (!canGoPrev) return;
+    if (viewMonth === 0) {
+      setViewYear(y => y - 1);
+      setViewMonth(11);
+    } else {
+      setViewMonth(m => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewYear(y => y + 1);
+      setViewMonth(0);
+    } else {
+      setViewMonth(m => m + 1);
+    }
+  };
+
+  const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay(); // 0 = Sunday
+  const totalDaysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate(); // accounts for leap years
+
+  const calendarDays: Array<{
+    dayNum: number | null;
+    dateYMD: string;
+    isPast: boolean;
+    isSunday: boolean;
+    isToday: boolean;
+  }> = [];
+
+  for (let b = 0; b < firstDayIndex; b++) {
+    calendarDays.push({
+      dayNum: null,
+      dateYMD: '',
+      isPast: true,
+      isSunday: false,
+      isToday: false,
+    });
+  }
+
+  for (let d = 1; d <= totalDaysInMonth; d++) {
+    const ymd = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayOfWeek = new Date(viewYear, viewMonth, d).getDay();
+    const isPast = ymd < todayYMD;
+    const isSunday = dayOfWeek === 0;
+    const isToday = ymd === todayYMD;
+    calendarDays.push({
+      dayNum: d,
+      dateYMD: ymd,
+      isPast,
+      isSunday,
+      isToday,
+    });
+  }
+
+  const selectedDateObj = new Date(scheduledDate);
+  const isSelectedDateSunday = selectedDateObj.getDay() === 0;
+
+  const dynamicSlots = slotsData?.slots || FALLBACK_TIME_SLOTS.map(s => ({
+    slot: s,
+    available: true,
+    capacity: 2,
+    remaining: 2,
+  }));
+
   const handleNext = async () => {
     if (step === 1 && !selectedVehicleId) {
       Alert.alert('Perhatian', 'Silakan pilih kendaraan yang akan diservis.');
@@ -75,14 +215,23 @@ export default function BookingScreen() {
       Alert.alert('Perhatian', 'Pilih minimal satu paket servis.');
       return;
     }
+    if (step === 3 && isSelectedDateSunday) {
+      Alert.alert(
+        'Bengkel Libur',
+        'Bengkel Meltune tutup pada hari Minggu. Silakan pilih hari operasional (Senin - Sabtu).'
+      );
+      return;
+    }
     if (step < 4) {
       setStep(s => s + 1);
     } else {
       setSubmitting(true);
       try {
-        await createBookingMutation.mutateAsync({
+        const res = await createBookingMutation.mutateAsync({
           vehicleId: selectedVehicleId,
-          vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : 'Mobil',
+          vehicleName: selectedVehicle
+            ? `${selectedVehicle.brand} ${selectedVehicle.model}`
+            : 'Mobil',
           licensePlate: selectedVehicle?.licensePlate || '',
           serviceIds: selectedServiceIds,
           serviceNames: selectedServices.map(s => s.name),
@@ -90,11 +239,33 @@ export default function BookingScreen() {
           totalDurationMinutes: totalDuration,
           scheduledDate,
           scheduledTimeSlot: scheduledTime,
-          problemDescription: problemDescription.trim() || 'Servis berkala Meltune Auto',
+          problemDescription:
+            problemDescription.trim() || 'Servis berkala Meltune Auto',
         });
+        setCreatedBookingRef(res.bookingReference || res.id || 'MLT-NEW');
         setIsSuccessModal(true);
       } catch (err: any) {
-        Alert.alert('Gagal Membuat Reservasi', err?.message || 'Terjadi kesalahan sistem.');
+        const errMsg =
+          err?.response?.data?.message || err?.message || 'Terjadi kesalahan sistem.';
+
+        if (
+          err?.response?.status === 401 ||
+          errMsg.toLowerCase().includes('token') ||
+          errMsg.toLowerCase().includes('unauthorized')
+        ) {
+          Alert.alert(
+            'Sesi Login Kedaluwarsa',
+            'Sesi masuk Anda telah kedaluwarsa. Silakan masuk kembali ke akun Anda untuk menyelesaikan reservasi.',
+            [
+              {
+                text: 'Masuk Kembali',
+                onPress: () => router.replace('/(auth)/login'),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Gagal Membuat Reservasi', errMsg);
+        }
       } finally {
         setSubmitting(false);
       }
@@ -111,13 +282,13 @@ export default function BookingScreen() {
 
   return (
     <AmbientGradientShell
-      tag="WORKBAY BSD"
+      tag="LOKASI SERVIS BSD"
       title="Reservasi Servis"
-      subtitle="Jadwalkan perawatan berkala kendaraan Anda"
+      subtitle="Jadwalkan perawatan presisi kendaraan Anda"
       showBack={step > 1}
       onBackPress={handleBack}
     >
-      {/* 1. Step Indicator Bar (At Top of Surface) */}
+      {/* 1. Step Indicator Bar */}
       <View style={styles.stepperContainer}>
         {[
           { num: 1, label: 'Kendaraan' },
@@ -172,51 +343,76 @@ export default function BookingScreen() {
             </Text>
           </View>
 
-          <DividedList
-            data={vehicles}
-            keyExtractor={item => item.id}
-            withOuterBorders
-            renderItem={v => {
-              const isSelected = selectedVehicleId === v.id;
-              return (
-                <Pressable
-                  key={v.id}
-                  onPress={() => setSelectedVehicleId(v.id)}
-                  style={[
-                    styles.vehicleRow,
-                    isSelected && styles.vehicleRowSelected,
-                  ]}
-                >
-                  <View
+          {vehicles.length === 0 && (
+            <View style={styles.emptyVehiclesCard}>
+              <AlertCircle size={28} color={MeltuneColors.burntOrange} />
+              <Text style={styles.emptyVehiclesTitle}>Belum Ada Kendaraan Terdaftar</Text>
+              <Text style={styles.emptyVehiclesSub}>
+                Daftarkan kendaraan pertama Anda ke garasi digital untuk melanjutkan booking servis.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/vehicle/add')}
+                style={styles.addFirstVehicleBtn}
+              >
+                <Plus size={16} color={MeltuneColors.white} />
+                <Text style={styles.addFirstVehicleBtnText}>Tambah Kendaraan Baru</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {vehicles.length > 0 && (
+            <DividedList
+              data={vehicles}
+              keyExtractor={item => item.id}
+              withOuterBorders
+              renderItem={v => {
+                const isSelected = selectedVehicleId === v.id;
+                return (
+                  <Pressable
+                    key={v.id}
+                    onPress={() => setSelectedVehicleId(v.id)}
                     style={[
-                      styles.radioCircle,
-                      isSelected && styles.radioCircleSelected,
+                      styles.vehicleRow,
+                      isSelected && styles.vehicleRowSelected,
                     ]}
                   >
-                    {isSelected && <View style={styles.radioInner} />}
-                  </View>
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        isSelected && styles.radioCircleSelected,
+                      ]}
+                    >
+                      {isSelected && <View style={styles.radioInner} />}
+                    </View>
 
-                  <View style={styles.vehicleInfoCol}>
-                    <Text style={styles.vehicleModelName}>{v.model}</Text>
-                    <Text style={styles.vehiclePlate}>
-                      {v.licensePlate} • Tahun {v.year}
-                    </Text>
-                    <Text style={styles.vehicleMileage}>
-                      Odometer: {v.mileage?.toLocaleString('id-ID')} km
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            }}
-          />
+                    <View style={styles.vehicleInfoCol}>
+                      <Text style={styles.vehicleModelName}>
+                        {v.brand} {v.model}
+                      </Text>
+                      <Text style={styles.vehiclePlate}>
+                        {v.licensePlate} • Tahun {v.year}
+                      </Text>
+                      {v.mileage ? (
+                        <Text style={styles.vehicleMileage}>
+                          Odometer: {v.mileage?.toLocaleString('id-ID')} km
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              }}
+            />
+          )}
 
-          <Pressable
-            onPress={() => router.push('/vehicle/add')}
-            style={styles.addVehicleButton}
-          >
-            <Plus size={16} color={MeltuneColors.burntOrange} />
-            <Text style={styles.addVehicleButtonText}>Daftarkan Mobil Baru</Text>
-          </Pressable>
+          {vehicles.length > 0 && (
+            <Pressable
+              onPress={() => router.push('/vehicle/add')}
+              style={styles.addVehicleButton}
+            >
+              <Plus size={16} color={MeltuneColors.burntOrange} />
+              <Text style={styles.addVehicleButtonText}>Daftarkan Mobil Baru</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -226,12 +422,12 @@ export default function BookingScreen() {
           <View style={styles.stepTitleGroup}>
             <Text style={styles.stepHeading}>Pilih Paket Layanan</Text>
             <Text style={styles.stepSub}>
-              Bisa memilih lebih dari satu paket servis berkala, tune up, atau rem.
+              Pilih satu atau lebih paket servis berkala, tune up, sistem rem, atau suspensi.
             </Text>
           </View>
 
           <DividedList
-            data={services}
+            data={activeServices}
             keyExtractor={item => item.id}
             withOuterBorders
             renderItem={s => {
@@ -251,7 +447,7 @@ export default function BookingScreen() {
             }}
           />
 
-          {/* Quiet Summary Line */}
+          {/* Summary Bar */}
           <View style={styles.triageSummaryBar}>
             <View>
               <Text style={styles.triageSummaryLabel}>Total Estimasi Biaya</Text>
@@ -270,86 +466,168 @@ export default function BookingScreen() {
       {step === 3 && (
         <View style={styles.stepBlock}>
           <View style={styles.stepTitleGroup}>
-            <Text style={styles.stepHeading}>Tentukan Waktu Kedatangan</Text>
+            <Text style={styles.stepHeading}>Tentukan Jadwal Kedatangan</Text>
             <Text style={styles.stepSub}>
-              Workbay beroperasi Senin - Sabtu pukul 08:30 - 17:30 WIB.
+              Bengkel Meltune beroperasi Senin - Sabtu pukul 08:30 - 17:30 WIB.
             </Text>
           </View>
 
-          {/* Date Selector */}
-          <Text style={styles.fieldSectionLabel}>Pilih Tanggal</Text>
-          <View style={styles.dateRow}>
-            {['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26'].map(d => {
-              const isSelected = scheduledDate === d;
-              const dateObj = new Date(d);
-              const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][
-                dateObj.getDay()
-              ];
-              const dayNum = dateObj.getDate();
-
-              return (
+          {/* Dynamic Month Calendar */}
+          <View style={styles.calendarContainer}>
+            <View style={styles.calendarHeaderRow}>
+              <View style={styles.calendarTitleWrap}>
+                <CalendarIcon size={18} color={MeltuneColors.burntOrange} />
+                <Text style={styles.calendarMonthText}>
+                  {MONTH_NAMES[viewMonth]} {viewYear}
+                </Text>
+              </View>
+              <View style={styles.calendarNavButtons}>
                 <Pressable
-                  key={d}
-                  onPress={() => setScheduledDate(d)}
+                  onPress={handlePrevMonth}
+                  disabled={!canGoPrev}
                   style={[
-                    styles.dateTile,
-                    isSelected && styles.dateTileSelected,
+                    styles.calNavBtn,
+                    !canGoPrev && styles.calNavBtnDisabled,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.dateDayName,
-                      isSelected && styles.dateTextSelected,
-                    ]}
-                  >
-                    {dayName}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dateDayNum,
-                      isSelected && styles.dateTextSelected,
-                    ]}
-                  >
-                    {dayNum}
-                  </Text>
+                  <ChevronLeft
+                    size={18}
+                    color={
+                      canGoPrev
+                        ? MeltuneColors.charcoal
+                        : MeltuneColors.textMutedLight
+                    }
+                  />
                 </Pressable>
-              );
-            })}
+                <Pressable onPress={handleNextMonth} style={styles.calNavBtn}>
+                  <ChevronRight size={18} color={MeltuneColors.charcoal} />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Day of Week Labels */}
+            <View style={styles.calendarDaysHeader}>
+              {DAY_LABELS.map((lbl, idx) => (
+                <Text
+                  key={lbl}
+                  style={[
+                    styles.calDayHeaderLabel,
+                    idx === 0 && styles.calSundayHeader,
+                  ]}
+                >
+                  {lbl}
+                </Text>
+              ))}
+            </View>
+
+            {/* Calendar Grid */}
+            <View style={styles.calendarGrid}>
+              {calendarDays.map((cell, idx) => {
+                if (cell.dayNum === null) {
+                  return <View key={`blank-${idx}`} style={styles.calCellEmpty} />;
+                }
+
+                const isSelected = scheduledDate === cell.dateYMD;
+                const isDisabled = cell.isPast || cell.isSunday;
+
+                return (
+                  <Pressable
+                    key={cell.dateYMD}
+                    disabled={isDisabled}
+                    onPress={() => setScheduledDate(cell.dateYMD)}
+                    style={[
+                      styles.calCell,
+                      isSelected && styles.calCellSelected,
+                      cell.isToday && !isSelected && styles.calCellToday,
+                      isDisabled && styles.calCellDisabled,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calCellText,
+                        cell.isSunday && styles.calCellSundayText,
+                        cell.isToday && styles.calCellTodayText,
+                        isSelected && styles.calCellTextSelected,
+                        isDisabled && styles.calCellDisabledText,
+                      ]}
+                    >
+                      {cell.dayNum}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {isSelectedDateSunday && (
+              <View style={styles.sundayWarningBox}>
+                <AlertCircle size={16} color={MeltuneColors.burntOrange} />
+                <Text style={styles.sundayWarningText}>
+                  Bengkel tutup pada hari Minggu. Silakan pilih hari Senin - Sabtu.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Time Slots */}
-          <Text style={[styles.fieldSectionLabel, { marginTop: Spacing.xl }]}>
-            Pilih Jam Workbay
-          </Text>
-          <View style={styles.slotGrid}>
-            {TIME_SLOTS.map(slot => {
-              const isSelected = scheduledTime === slot;
-              return (
-                <Pressable
-                  key={slot}
-                  onPress={() => setScheduledTime(slot)}
-                  style={[
-                    styles.slotTile,
-                    isSelected && styles.slotTileSelected,
-                  ]}
-                >
-                  <Clock
-                    size={14}
-                    color={
-                      isSelected ? MeltuneColors.white : MeltuneColors.textSecondaryLight
-                    }
-                  />
-                  <Text
+          <View style={styles.slotsSection}>
+            <View style={styles.slotsHeaderRow}>
+              <Text style={styles.fieldSectionLabel}>Pilih Jam Servis</Text>
+              {loadingSlots && (
+                <ActivityIndicator size="small" color={MeltuneColors.burntOrange} />
+              )}
+            </View>
+
+            <View style={styles.slotGrid}>
+              {dynamicSlots.map(s => {
+                const isSelected = scheduledTime === s.slot;
+                const isFull = !s.available || s.remaining <= 0;
+
+                return (
+                  <Pressable
+                    key={s.slot}
+                    disabled={isFull}
+                    onPress={() => setScheduledTime(s.slot)}
                     style={[
-                      styles.slotTimeText,
-                      isSelected && styles.slotTextSelected,
+                      styles.slotTile,
+                      isSelected && styles.slotTileSelected,
+                      isFull && styles.slotTileFull,
                     ]}
                   >
-                    {slot} WIB
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <View style={styles.slotContentRow}>
+                      <Clock
+                        size={14}
+                        color={
+                          isSelected
+                            ? MeltuneColors.white
+                            : isFull
+                            ? MeltuneColors.textMutedLight
+                            : MeltuneColors.textSecondaryLight
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.slotTimeText,
+                          isSelected && styles.slotTextSelected,
+                          isFull && styles.slotTextFull,
+                        ]}
+                      >
+                        {s.slot} WIB
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.slotCapacityText,
+                        isSelected && styles.slotCapacitySelected,
+                        isFull && styles.slotCapacityFull,
+                      ]}
+                    >
+                      {isFull ? 'Penuh' : `Tersedia: ${s.remaining} slot`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {/* Problem Notes Input */}
@@ -376,7 +654,7 @@ export default function BookingScreen() {
           <View style={styles.stepTitleGroup}>
             <Text style={styles.stepHeading}>Konfirmasi Rincian Servis</Text>
             <Text style={styles.stepSub}>
-              Pastikan rincian data mobil dan jadwal workbay telah sesuai sebelum verifikasi.
+              Pastikan rincian data mobil dan jadwal servis telah sesuai sebelum verifikasi.
             </Text>
           </View>
 
@@ -384,7 +662,7 @@ export default function BookingScreen() {
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Kendaraan</Text>
               <Text style={styles.summaryValueBold}>
-                {selectedVehicle?.model} ({selectedVehicle?.licensePlate})
+                {selectedVehicle?.brand} {selectedVehicle?.model} ({selectedVehicle?.licensePlate})
               </Text>
             </View>
 
@@ -413,7 +691,7 @@ export default function BookingScreen() {
             <View style={styles.summaryDivider} />
 
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Estimasi Durasi Workbay</Text>
+              <Text style={styles.summaryLabel}>Estimasi Durasi Servis</Text>
               <Text style={styles.summaryValue}>{totalDuration} Menit</Text>
             </View>
 
@@ -430,14 +708,14 @@ export default function BookingScreen() {
       {/* Primary Action Button */}
       <View style={styles.actionSection}>
         <PrimaryButton
-          title={step === 4 ? 'Konfirmasi Reservasi Workbay' : 'Lanjutkan Langkah'}
+          title={step === 4 ? 'Konfirmasi Reservasi Servis' : 'Lanjutkan Langkah'}
           onPress={handleNext}
           loading={submitting}
           size="lg"
         />
       </View>
 
-      {/* Success Modal Simulation */}
+      {/* Success Modal */}
       {isSuccessModal && (
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, Shadows.darkElevated]}>
@@ -446,10 +724,10 @@ export default function BookingScreen() {
             </View>
 
             <Text style={styles.modalTitle}>Reservasi Berhasil</Text>
-            <Text style={styles.modalRef}>Kode: BK-20261122-NEW</Text>
+            <Text style={styles.modalRef}>Kode: {createdBookingRef}</Text>
 
             <Text style={styles.modalMessage}>
-              Jadwal servis mobil Anda telah masuk ke sistem antrean workbay. Kepala teknisi kami akan menyiapkan stall pengerjaan.
+              Jadwal servis mobil Anda telah masuk ke antrean servis Meltune Auto. Kepala teknisi kami akan menyiapkan stall pengerjaan.
             </Text>
 
             <PrimaryButton
@@ -480,11 +758,11 @@ export default function BookingScreen() {
 const styles = StyleSheet.create({
   stepperContainer: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.xl, // 24px
+    paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(36, 37, 34, 0.08)',
-    marginBottom: Spacing.xl,      // 24px
+    marginBottom: Spacing.xl,
   },
   stepItem: {
     flex: 1,
@@ -530,7 +808,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weight.medium,
   },
   stepBlock: {
-    marginBottom: Spacing.xxxl, // 40px
+    marginBottom: Spacing.xxxl,
   },
   stepTitleGroup: {
     paddingHorizontal: Spacing.xl,
@@ -549,6 +827,46 @@ const styles = StyleSheet.create({
     color: MeltuneColors.textSecondaryLight,
     marginTop: Spacing.xs,
     lineHeight: 18,
+  },
+  emptyVehiclesCard: {
+    marginHorizontal: Spacing.xl,
+    padding: Spacing.xl,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(217, 107, 58, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 107, 58, 0.25)',
+    alignItems: 'center',
+  },
+  emptyVehiclesTitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.body,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+    marginTop: Spacing.md,
+  },
+  emptyVehiclesSub: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    color: MeltuneColors.textSecondaryLight,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.lg,
+    lineHeight: 18,
+  },
+  addFirstVehicleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: MeltuneColors.burntOrange,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.xs,
+  },
+  addFirstVehicleBtnText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.white,
   },
   vehicleRow: {
     flexDirection: 'row',
@@ -650,47 +968,144 @@ const styles = StyleSheet.create({
     color: MeltuneColors.burntOrange,
     fontWeight: Typography.weight.semibold,
   },
+  calendarContainer: {
+    marginHorizontal: Spacing.xl,
+    backgroundColor: MeltuneColors.white,
+    borderRadius: Radius.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.1)',
+    padding: Spacing.lg,
+  },
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(36, 37, 34, 0.06)',
+  },
+  calendarTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  calendarMonthText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.body,
+    fontWeight: Typography.weight.bold,
+    color: MeltuneColors.charcoal,
+  },
+  calendarNavButtons: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  calNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 37, 34, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: MeltuneColors.surfaceLightElevated,
+  },
+  calNavBtnDisabled: {
+    opacity: 0.3,
+  },
+  calendarDaysHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  calDayHeaderLabel: {
+    width: '14.28%',
+    textAlign: 'center',
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    fontWeight: Typography.weight.semibold,
+    color: MeltuneColors.textMutedLight,
+  },
+  calSundayHeader: {
+    color: '#D9534F',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calCellEmpty: {
+    width: '14.28%',
+    height: 38,
+  },
+  calCell: {
+    width: '14.28%',
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.xs,
+    marginVertical: 2,
+  },
+  calCellSelected: {
+    backgroundColor: MeltuneColors.burntOrange,
+  },
+  calCellToday: {
+    borderWidth: 1,
+    borderColor: MeltuneColors.burntOrange,
+  },
+  calCellDisabled: {
+    opacity: 0.25,
+  },
+  calCellText: {
+    fontFamily: Typography.fontFamilyMono,
+    fontSize: Typography.size.caption,
+    fontWeight: Typography.weight.semibold,
+    color: MeltuneColors.charcoal,
+  },
+  calCellSundayText: {
+    color: '#D9534F',
+  },
+  calCellTodayText: {
+    color: MeltuneColors.burntOrange,
+    fontWeight: Typography.weight.bold,
+  },
+  calCellTextSelected: {
+    color: MeltuneColors.white,
+    fontWeight: Typography.weight.bold,
+  },
+  calCellDisabledText: {
+    color: MeltuneColors.textMutedLight,
+  },
+  sundayWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: 'rgba(217, 107, 58, 0.08)',
+    padding: Spacing.sm,
+    borderRadius: Radius.xs,
+    marginTop: Spacing.md,
+  },
+  sundayWarningText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: Typography.size.micro,
+    color: MeltuneColors.burntOrange,
+    fontWeight: Typography.weight.medium,
+    flex: 1,
+  },
+  slotsSection: {
+    marginTop: Spacing.xl,
+  },
+  slotsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
   fieldSectionLabel: {
     fontFamily: Typography.fontFamily,
     fontSize: Typography.size.caption,
     fontWeight: Typography.weight.bold,
     color: MeltuneColors.charcoal,
-    paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
-  },
-  dateTile: {
-    flex: 1,
-    backgroundColor: MeltuneColors.white,
-    borderWidth: 1,
-    borderColor: 'rgba(36, 37, 34, 0.1)',
-    borderRadius: Radius.xs,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    minHeight: 68,
-  },
-  dateTileSelected: {
-    backgroundColor: MeltuneColors.charcoal,
-    borderColor: MeltuneColors.charcoal,
-  },
-  dateDayName: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.size.caption,
-    color: MeltuneColors.textSecondaryLight,
-  },
-  dateDayNum: {
-    fontFamily: Typography.fontFamilyMono,
-    fontSize: Typography.size.title3,
-    fontWeight: Typography.weight.bold,
-    color: MeltuneColors.charcoal,
-    marginTop: 2,
-  },
-  dateTextSelected: {
-    color: MeltuneColors.white,
   },
   slotGrid: {
     flexDirection: 'row',
@@ -700,20 +1115,28 @@ const styles = StyleSheet.create({
   },
   slotTile: {
     width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     backgroundColor: MeltuneColors.white,
     borderWidth: 1,
     borderColor: 'rgba(36, 37, 34, 0.1)',
     borderRadius: Radius.xs,
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    minHeight: 48,
+    paddingHorizontal: Spacing.md,
+    minHeight: 56,
+    justifyContent: 'center',
   },
   slotTileSelected: {
     backgroundColor: MeltuneColors.burntOrange,
     borderColor: MeltuneColors.burntOrange,
+  },
+  slotTileFull: {
+    backgroundColor: 'rgba(36, 37, 34, 0.04)',
+    borderColor: 'rgba(36, 37, 34, 0.06)',
+    opacity: 0.6,
+  },
+  slotContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   slotTimeText: {
     fontFamily: Typography.fontFamily,
@@ -724,8 +1147,24 @@ const styles = StyleSheet.create({
   slotTextSelected: {
     color: MeltuneColors.white,
   },
+  slotTextFull: {
+    color: MeltuneColors.textMutedLight,
+  },
+  slotCapacityText: {
+    fontFamily: Typography.fontFamilyMono,
+    fontSize: Typography.size.micro,
+    color: MeltuneColors.textSecondaryLight,
+    marginTop: 4,
+  },
+  slotCapacitySelected: {
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  slotCapacityFull: {
+    color: '#D9534F',
+  },
   inputWrapper: {
     paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.sm,
   },
   summaryCard: {
     backgroundColor: MeltuneColors.white,

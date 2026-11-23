@@ -47,7 +47,7 @@ export default function BookingHistoryScreen() {
     <GradientBackground variant="subtleIvory">
       <AppHeader
         title="Riwayat Servis"
-        subtitle="Log Pemeliharaan & Rekam Jejak Workbay"
+        subtitle="Log Pemeliharaan & Rekam Jejak Servis"
         tag="MAINTENANCE ARCHIVE"
         showBack
       />

@@ -161,7 +161,7 @@ export default function HomeScreen() {
             <View style={styles.activeBannerTop}>
               <View style={styles.activeTag}>
                 <View style={styles.pulseDot} />
-                <Text style={styles.activeTagText}>Pengerjaan Workbay Aktif</Text>
+                <Text style={styles.activeTagText}>Pengerjaan Servis Aktif</Text>
               </View>
               <Text style={styles.workbayTagText}>{activeBooking.workbayNumber}</Text>
             </View>

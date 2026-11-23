@@ -25,9 +25,9 @@ export default function ServiceTrackingScreen() {
   return (
     <AmbientGradientBackground preset="cockpitDark">
       <AppHeader
-        title="Live Workbay Tracking"
+        title="Live Service Tracking"
         subtitle={`Mobil: ${activeBooking.vehicleName}`}
-        tag="LIVE TRACKING WORKBAY"
+        tag="STATUS PENGERJAAN"
         dark
         showBack
       />
@@ -44,7 +44,7 @@ export default function ServiceTrackingScreen() {
           <View style={styles.statusTopRow}>
             <View style={styles.pulseBox}>
               <View style={styles.pulseInner} />
-              <Text style={styles.pulseText}>WORKBAY LIVE STATUS</Text>
+              <Text style={styles.pulseText}>STATUS SERVIS REAL-TIME</Text>
             </View>
             <View style={styles.bayTag}>
               <Text style={styles.bayTagText}>{activeBooking.workbayNumber}</Text>
@@ -79,7 +79,7 @@ export default function ServiceTrackingScreen() {
         {activeBooking.stages && (
           <View style={styles.timelineSection}>
             <Text style={styles.timelineSectionTitle}>
-              Tahapan Pekerjaan Mekanik di Workbay
+              Tahapan Pengerjaan Servis Kendaraan
             </Text>
             <BookingTimeline
               stages={activeBooking.stages}

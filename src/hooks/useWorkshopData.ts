@@ -134,6 +134,21 @@ export function useBookingQuery(id?: string) {
   });
 }
 
+export function useAvailableSlotsQuery(date: string) {
+  return useQuery({
+    queryKey: ['available-slots', date],
+    queryFn: async () => {
+      if (!date) return null;
+      try {
+        return await api.bookings.getAvailableSlots(date);
+      } catch {
+        return null;
+      }
+    },
+    enabled: Boolean(date),
+  });
+}
+
 export function useCreateBookingMutation() {
   const qc = useQueryClient();
   return useMutation({

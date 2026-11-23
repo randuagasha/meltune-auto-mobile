@@ -43,7 +43,7 @@ export default function NotificationCenterScreen() {
     <GradientBackground variant="subtleIvory">
       <AppHeader
         title="Pusat Notifikasi"
-        subtitle="Pemberitahuan Servis, Workbay & Promo"
+        subtitle="Pemberitahuan Servis, Jadwal & Promo"
         tag="PUSAT NOTIFIKASI"
         showBack
       />

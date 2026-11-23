@@ -146,7 +146,7 @@ export default function LoyaltyScreen() {
           <View style={styles.tierInfo}>
             <Text style={styles.tierTitle}>Tingkat Member: {loyalty.tierName}</Text>
             <Text style={styles.tierSub}>
-              Dapatkan diskon 10% untuk seluruh chemical detailing dan prioritas alokasi Workbay 2.
+              Dapatkan diskon 10% untuk seluruh chemical detailing dan prioritas antrean servis utama.
             </Text>
           </View>
         </View>

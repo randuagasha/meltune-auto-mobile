@@ -1,11 +1,13 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const AUTH_TOKEN_KEY = 'meltune_auth_token';
 
 /**
- * Custom storage adapter for Supabase client
- * Compatible with React Native (Expo SecureStore) and Web (localStorage)
+ * Storage adapter for Supabase client
+ * Uses AsyncStorage as primary persistence so large Supabase session payloads
+ * (which exceed Expo SecureStore's 2048-byte limit) are never truncated or lost.
  */
 export const ExpoSecureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
@@ -13,6 +15,11 @@ export const ExpoSecureStoreAdapter = {
       if (Platform.OS === 'web') {
         return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
       }
+      // 1. Try AsyncStorage first
+      const val = await AsyncStorage.getItem(key);
+      if (val !== null) return val;
+
+      // 2. Fallback to SecureStore
       return await SecureStore.getItemAsync(key);
     } catch {
       return null;
@@ -26,9 +33,19 @@ export const ExpoSecureStoreAdapter = {
         }
         return;
       }
-      await SecureStore.setItemAsync(key, value);
+      // Always persist to AsyncStorage (no 2048 byte limit)
+      await AsyncStorage.setItem(key, value);
+
+      // Also mirror to SecureStore if payload fits within 2048 bytes
+      if (value.length < 2000) {
+        try {
+          await SecureStore.setItemAsync(key, value);
+        } catch {
+          // Ignore SecureStore size errors
+        }
+      }
     } catch {
-      // Ignore secure storage errors on locked devices
+      // Ignore storage errors on locked devices
     }
   },
   removeItem: async (key: string): Promise<void> => {
@@ -39,9 +56,14 @@ export const ExpoSecureStoreAdapter = {
         }
         return;
       }
-      await SecureStore.deleteItemAsync(key);
+      await AsyncStorage.removeItem(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch {
+        // Ignore deletion errors
+      }
     } catch {
-      // Ignore secure storage deletion errors
+      // Ignore storage errors
     }
   },
 };
